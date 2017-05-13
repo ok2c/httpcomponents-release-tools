@@ -1,0 +1,8 @@
+HC_RELEASE_DIR =
+HC_DIST_DIR =
+HC_WEBSITE_DIR =
+HC_WEB_STAGE_DIR =
+
+signing.keyId=
+signing.password=
+signing.secretKeyRingFile=$HOME/.gnupg/secring.gpg

@@ -1,0 +1,313 @@
+/*
+ * ====================================================================
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import ok2c.httpcomponents.release.ReleaseTool
+import ok2c.httpcomponents.release.pom.Pom
+import ok2c.httpcomponents.release.pom.PomArtifact
+import ok2c.httpcomponents.release.svn.Svn
+import ok2c.httpcomponents.release.svn.SvnBulkOp
+import ok2c.httpcomponents.release.svn.SvnCpFile
+import ok2c.httpcomponents.release.svn.SvnRm
+
+def hcDir = file(project.'HC_RELEASE_DIR')
+
+task releaseDetails {
+    group = 'Release'
+    description = "Print release details."
+    doLast {
+        def releaseTool = new ReleaseTool(hcDir)
+        releaseTool.showStatus()
+    }
+}
+
+task createRC {
+    group = 'Release'
+    description = "Cancel a release candidate."
+    doLast {
+        def releaseTool = new ReleaseTool(hcDir)
+        releaseTool.prepareReleaseCandidate()
+    }
+}
+
+task cancelRC {
+    group = 'Release'
+    description = "Cancel the actual release candiate."
+    doLast {
+        def releaseTool = new ReleaseTool(hcDir)
+        releaseTool.cancelRelease()
+    }
+}
+
+task nextSnapshot {
+    group = 'Release'
+    description = "Update project to the next SNAPSHOT version."
+    doLast {
+        def releaseTool = new ReleaseTool(hcDir)
+        releaseTool.makeNextSnapshot()
+    }
+}
+
+task updateDistStage() {
+    group = 'Release'
+    description = "Update the staging location from the staging repository."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+        if (hcDistDir.exists()) {
+            Svn.update(hcDistDir)
+        }
+    }
+}
+
+task commitDist() {
+    group = 'Release'
+    description = "Commit dist to the staging repository."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+        def pom = Pom.parsePom(hcDir)
+        def releaseTool = new ReleaseTool(hcDir)
+        def releaseTag = releaseTool.getReleaseTag()
+        if (!releaseTag) {
+            println "Release has not been tagged"
+            return
+
+        }
+        def rc = new PomArtifact(pom.groupId, pom.artifactId, releaseTag)
+        if (pom.major != rc.major || pom.minor != rc.minor || pom.incremental != rc.incremental) {
+            println "Inconsistent POM and RC tag versions: POM = ${pom.version}; RC tag = ${releaseTag}"
+            return
+        }
+        def productName = ProductNames.get(pom.artifactId)
+        def rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${releaseTag}"
+        def rcDistDir = file("${hcDistDir}/${rcFullName}")
+        println "Committing ${ProductNames.get(pom.artifactId)} ${pom.version} ${rc.qualifier} dist"
+        copy {
+            from "${project.buildDir}/dist"
+            into rcDistDir
+        }
+        Svn.scheduleForAddition(rcDistDir)
+        def revision = Svn.commit(file("${hcDistDir}"), "${productName} ${pom.version} ${rc.qualifier} dist")
+        println "Committed as r${revision}"
+    }
+}
+
+task prepareVote() {
+    group = 'Release'
+    description = "Generates release vote message content."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+
+        def pom = Pom.parsePom(hcDir)
+        def releaseVer = pom.version
+        def releaseTool = new ReleaseTool(hcDir)
+        def releaseTag = releaseTool.getReleaseTag()
+        if (!releaseTag) {
+            println "Release has not been tagged"
+            return
+        }
+        def rc = new PomArtifact(pom.groupId, pom.artifactId, releaseTag)
+        if (pom.major != rc.major || pom.minor != rc.minor || pom.incremental != rc.incremental) {
+            println "Inconsistent POM and RC tag versions: POM = ${pom.version}; RC tag = ${releaseTag}"
+            return
+        }
+
+        def productName = ProductNames.get(pom.artifactId)
+        def rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${releaseTag}"
+        def rcQualifier = rc.qualifier
+
+        def rcDistDir = file("${hcDistDir}/${rcFullName}")
+        if (!rcDistDir.exists()) {
+            println "RC dist ${rcDistDir} does not exist"
+            return
+        }
+
+        def svnInfo = Svn.info(rcDistDir)
+        def repoURL = svnInfo.url
+        def distRevision = svnInfo.lastChangedRevision
+
+        println '----------------8<-------------[ cut here ]------------------'
+        println "[VOTE] Release ${productName} ${releaseVer} based on ${rcQualifier}"
+        println ""
+        println "Please vote on releasing these packages as ${productName} ${releaseVer}."
+        println "The vote is open for the at least 72 hours, and only votes from"
+        println "HttpComponents PMC members are binding. The vote passes if at least"
+        println "three binding +1 votes are cast and there are more +1 than -1 votes."
+        println ""
+        println "Release notes:"
+        println " ${repoURL}/${rcFullName}/RELEASE_NOTES-${pom.major}.${pom.minor}.x.txt"
+        println ""
+        println "Maven artefacts:"
+        println " [link]"
+        println ""
+        println "Git Tag: ${releaseTag}"
+        println " ${pom.scm.uriPattern.replace('${project.scm.tag}', releaseTag)}"
+        println ""
+        println "Packages:"
+        println " ${repoURL}/${rcFullName}"
+        println " revision ${distRevision}"
+        println ""
+        println "Hashes:"
+        fileTree(rcDistDir).include('*.tar.gz', '*.zip').each { File file ->
+            def hash = new File(file.parentFile, file.name + '.md5')
+            if (hash.exists()) {
+                println " ${hash.text} ${file.name}"
+            }
+        }
+        println ""
+        println "Keys:"
+        println " http://www.apache.org/dist/httpcomponents/${productName.toLowerCase(Locale.ROOT)}/KEYS"
+        println ""
+        println "--------------------------------------------------------------------------"
+        println "Vote: ${productName} ${releaseVer} release"
+        println "[ ] +1 Release the packages as ${productName} ${releaseVer}."
+        println "[ ] -1 I am against releasing the packages (must include a reason)."
+        println '----------------8<-------------[ cut here ]------------------'
+    }
+}
+
+task svnmucc() {
+    group = 'Release'
+    description = "Generates svnmucc command file."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+
+        def pom = Pom.parsePom(hcDir)
+        def releaseTool = new ReleaseTool(hcDir)
+        def releaseTag = releaseTool.getReleaseTag()
+        if (!releaseTag) {
+            println "Release has not been tagged"
+            return
+        }
+        def productName = ProductNames.get(pom.artifactId)
+        def productPath = productName.toLowerCase(Locale.ROOT)
+        def rcFullName = "${productPath}-${releaseTag}"
+
+        def rcDistDir = file("${hcDistDir}/${rcFullName}")
+        if (!rcDistDir.exists()) {
+            println "RC dist ${rcDistDir} does not exist"
+            return
+        }
+        println 'svnmucc file'
+        println '----------------8<-------------[ cut here ]------------------'
+        println "rm"
+        println "release/httpcomponents/${productPath}/RELEASE_NOTES-${pom.major}.${pom.minor}.x.txt"
+        println ""
+        fileTree(rcDistDir).each { File file ->
+            def packageName = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
+            def classifier = file.name.startsWith(packageName) ? file.name.substring(packageName.length()) : ""
+            println "mv"
+            println "dev/httpcomponents/${rcFullName}/${file.name}"
+            switch(classifier) {
+                case ~/^(osgi-)?bin/:
+                    println "release/httpcomponents/${productPath}/binary/${file.name}"
+                    break
+                case "src":
+                    println "release/httpcomponents/${productPath}/source/${file.name}"
+                    break
+                default:
+                    println "release/httpcomponents/${productPath}/${file.name}"
+                    break
+            }
+            println ""
+        }
+        println "rm"
+        println "dev/httpcomponents/${rcFullName}"
+        println '----------------8<-------------[ cut here ]------------------'
+    }
+}
+
+task promoteDist() {
+    group = 'Release'
+    description = "Promotes dist to the release repository."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+
+        def pom = Pom.parsePom(hcDir)
+        def releaseTool = new ReleaseTool(hcDir)
+        def releaseTag = releaseTool.getReleaseTag()
+        if (!releaseTag) {
+            println "Release has not been tagged"
+            return
+        }
+        def productName = ProductNames.get(pom.artifactId)
+        def productPath = productName.toLowerCase(Locale.ROOT)
+        def rcFullName = "${productPath}-${releaseTag}"
+
+        def rcDistDir = file("${hcDistDir}/${rcFullName}")
+        if (!rcDistDir.exists()) {
+            println "RC dist ${rcDistDir} does not exist"
+            return
+        }
+        def svnInfo = Svn.info(rcDistDir)
+        def repoURL = svnInfo.url as String
+        def repoRootURL = svnInfo.repositoryRootUrl as String
+        def rcLocation = repoURL - repoRootURL
+        if (rcLocation.startsWith('/')) {
+            rcLocation = rcLocation.substring(1)
+        }
+
+        def bulkOps = []
+        bulkOps.add(new SvnRm(new File("release/httpcomponents/${productPath}/RELEASE_NOTES-${pom.major}.${pom.minor}.x.txt")))
+        fileTree(rcDistDir).each { File file ->
+            def packageName = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
+            def classifier = file.name.startsWith(packageName) ? file.name.substring(packageName.length()) : ""
+            File src = new File("${rcLocation}/${file.name}")
+            File dst
+            switch (classifier) {
+                case ~/^(osgi-)?bin/:
+                    dst = new File("release/httpcomponents/${productPath}/binary/${file.name}")
+                    break
+                case "src":
+                    dst = new File("release/httpcomponents/${productPath}/source/${file.name}")
+                    break
+                default:
+                    dst = new File("release/httpcomponents/${productPath}/${file.name}")
+                    break
+            }
+            bulkOps.add(new SvnCpFile(dst, src))
+            bulkOps.add(new SvnRm(src))
+        }
+        bulkOps.add(new SvnRm(new File(rcLocation)))
+
+        println "Promoting ${productName} ${pom.version} dist"
+
+        def revision = Svn.mucc(new URI(repoRootURL), bulkOps as List<SvnBulkOp>, "${productName} ${pom.version} release dist")
+        println "Committed as r${revision}"
+    }
+}

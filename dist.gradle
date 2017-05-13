@@ -1,0 +1,229 @@
+/*
+ * ====================================================================
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+apply plugin: HCReleasePlugin
+apply plugin: 'signing'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+/////////////////////////// Assembly  ////////////////////////////////////////
+
+CopySpec docs(File dir, String delim) {
+    CopySpec spec = copySpec {
+        from (dir) {
+            include 'README.txt'
+            include 'LICENSE.txt'
+            include 'NOTICE.txt'
+            include 'RELEASE_NOTES.txt'
+            filter(Line.delim(delim), Line.filter())
+        }
+        from ("${dir}/target/site/apidocs") {
+            into 'javadoc'
+        }
+        from ("${dir}/target/site/tutorial") {
+            into 'tutorial'
+        }
+    }
+    hcPom.modules.each { submodule ->
+        spec.from ("${dir}/${submodule.name}/target/site/examples") {
+            into 'examples'
+            filter(Line.delim(delim), Line.filter())
+        }
+    }
+    spec
+}
+
+CopySpec libs(Configuration cfg) {
+    CopySpec spec = copySpec {
+        into 'lib'
+    }
+    if (!cfg.resolvedConfiguration.hasError()) {
+        cfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            spec.from(artifact.file.absolutePath) {
+                include artifact.file.name
+            }
+        }
+    }
+    spec
+}
+
+CopySpec osgiLibs(File dir) {
+    CopySpec spec = copySpec {
+    }
+    hcPom.modules.each { submodule ->
+        if (submodule.name.endsWith('-osgi')) {
+            spec.from("${dir}/${submodule.name}/target") {
+                include "*.jar"
+                exclude "*-sources.jar"
+                exclude "*-javadoc.jar"
+            }
+        }
+    }
+    spec
+}
+
+CopySpec sources(File dir) {
+    copySpec {
+        from (dir) {
+            exclude '**/bin/**'
+            exclude '**/target/**'
+            exclude '**/build/**'
+            exclude '**/lib/**'
+            exclude '**/.*'
+            exclude '**/*.iml'
+            exclude '**/log4j2-debug.xml'
+        }
+    }
+}
+
+task distWinBin(type: Zip) {
+    with docs(hcDir, Line.CRLF), libs(configurations.hc)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'bin'
+}
+
+task distUxBin(type: Tar) {
+    with docs(hcDir, Line.LF), libs(configurations.hc)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'bin'
+}
+
+task distWinOSGiBin(type: Zip) {
+    with docs(hcDir, Line.CRLF), osgiLibs(hcDir)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'osgi-bin'
+}
+
+task distUxOSGiBin(type: Tar) {
+    with docs(hcDir, Line.LF), osgiLibs(hcDir)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'osgi-bin'
+}
+
+task distWinSrc(type: Zip) {
+    with sources(hcDir)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'src'
+}
+
+task distUxSrc(type: Tar) {
+    with sources(hcDir)
+    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    classifier = 'src'
+}
+
+tasks.withType(AbstractArchiveTask) { archive ->
+    archive.baseName = PackageNames.get(hcPom.artifactId)
+    archive.version = hcPom.version
+    archive.destinationDir = file("${project.buildDir}/dist")
+}
+
+tasks.withType(Tar) { tar ->
+    tar.extension = "tar.gz"
+    tar.compression = Compression.GZIP
+}
+
+configurations {
+    dist
+}
+
+task sign(type: Sign) {
+    sign configurations.dist
+}
+
+task digest(type: Digest) {
+    digest configurations.dist
+}
+
+task releaseNotes(type: Copy) {
+    from "${hcDir}/RELEASE_NOTES.txt"
+    into "${project.buildDir}/dist"
+    rename { "RELEASE_NOTES-${hcPom.major}.${hcPom.minor}.x.txt" }
+}
+
+artifacts {
+    tasks.withType(AbstractArchiveTask) { archive ->
+        dist archive
+    }
+    sign.signatures.each { PublishArtifact artifact ->
+        archives artifact
+    }
+    digest.hashes.each { artifact ->
+        archives artifact
+    }
+}
+
+assemble.dependsOn = [sign, digest, releaseNotes]
+
+/////////////////////////// Release tasks  ////////////////////////////////////////
+
+task showDistDetails {
+    group = 'Release'
+    doLast {
+        println "-----"
+        println "Distribution ${hcPom.name} ${hcPom.version}"
+        println "Repository tag ${hcPom.scm.tag}"
+        println "Repository URL ${hcPom.scm.uri}"
+        println "-----"
+    }
+}
+
+task showDistArtefacts(dependsOn: showDistDetails) {
+    group = 'Release'
+    doLast {
+        println "-----"
+        println "Binary artifacts: "
+        def binCfg = configurations.hc
+        binCfg.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+            println "- ${artifact.file}"
+        }
+        println "-----"
+        println "Dist artifacts: "
+        def distCfg = configurations.dist
+        distCfg.artifacts.each { artifact ->
+            println "- ${artifact.file}"
+        }
+        println "-----"
+    }
+}
+
+/////////////////////////// Post-init configuration  ////////////////////////////////////////
+
+def askPassphrase = {
+    def password = project.ext.has('signing.password') ? project.ext.'signing.password' : null
+    def keyId = project.ext.has('signing.keyId') ? project.ext.'signing.keyId' : null
+    if (keyId && !password) {
+        def console = System.console()
+        if (console) {
+            console.println "\n> Please provide password for PGP key ${keyId}: "
+            char[] raw = console.readPassword()
+            project.ext.'signing.password' = new String(raw)
+        }
+    }
+}
+
+gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
+    taskGraph.allTasks.findAll { task -> task instanceof Sign }.each { task ->
+        task.doFirst { askPassphrase() }
+    }
+}
