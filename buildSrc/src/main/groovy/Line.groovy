@@ -30,4 +30,8 @@ class Line {
         ['eol': FixCrLfFilter.CrLf.newInstance(s), 'fixlast': false]
     }
 
+    static final String CRLF = 'crlf'
+    static final String LF = 'lf'
+    static final String ASIS = 'asis'
+
 }

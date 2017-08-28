@@ -66,11 +66,11 @@ class ReleaseTool {
         def name = getProductName(artifactId)
 
         def qualifier = pom.qualifier
-        if (qualifier != 'SNAPSHOT') {
+        if (!qualifier.endsWith('SNAPSHOT')) {
             println "Unexpected version: ${pom.version}"
             return
         }
-        def releaseVer = pom.version - ('-' + qualifier)
+        def releaseVer = pom.version - ('-SNAPSHOT')
         println "Please enter release version: [defaults to ${releaseVer}]"
 
         def console = System.console()
