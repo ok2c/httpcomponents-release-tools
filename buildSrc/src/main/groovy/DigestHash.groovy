@@ -18,46 +18,59 @@
  * under the License.
  */
 
+
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.internal.artifacts.publish.AbstractPublishArtifact
 
-class DigestHash extends AbstractPublishArtifact  {
+final class DigestHash extends AbstractPublishArtifact  {
 
-    final PublishArtifact toDigestArtifact
+    private final PublishArtifact digestArtifact
+    private final extension
+    private final algo
 
-    DigestHash(PublishArtifact toDigest, Object... tasks) {
+    DigestHash(PublishArtifact toDigest, String extension, String algo, Object... tasks) {
         super(tasks)
-        this.toDigestArtifact = toDigest
+        this.digestArtifact = toDigest
+        this.extension = extension
+        this.algo = algo
+    }
+
+    PublishArtifact getDigestArtifact() {
+        return digestArtifact;
     }
 
     @Override
     String getName() {
-        toDigestArtifact.name
+        digestArtifact.name
     }
 
     @Override
     String getExtension() {
-        'md5'
+        extension
     }
 
     @Override
     String getType() {
-        'md5'
+        algo
+    }
+
+    String getAlgo() {
+        algo
     }
 
     @Override
     String getClassifier() {
-        toDigestArtifact.classifier
+        digestArtifact.classifier
     }
 
     @Override
     File getFile() {
-        new File(toDigestArtifact.file.path + ".${getExtension()}")
+        new File(digestArtifact.file.path + ".${getExtension()}")
     }
 
     @Override
     Date getDate() {
-        toDigestArtifact.date
+        digestArtifact.date
     }
 
 }

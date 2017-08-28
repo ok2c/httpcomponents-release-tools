@@ -34,7 +34,8 @@ class Digest extends DefaultTask {
     void digest(PublishArtifact... artifacts) {
         for (PublishArtifact artifact in artifacts) {
             dependsOn(artifact)
-            hashes.add(new DigestHash(artifact))
+            hashes.add(new DigestHash(artifact, 'md5', 'md5'))
+            hashes.add(new DigestHash(artifact, 'sha512', 'sha-512'))
         }
     }
 
@@ -44,7 +45,7 @@ class Digest extends DefaultTask {
                 digest(artifact)
             }
             configuration.allArtifacts.whenObjectRemoved { DigestHash artifact ->
-                hashes.remove(hashes.find { it.toDigestArtifact == artifact })
+                hashes.remove(hashes.find { it.digestArtifact == artifact })
             }
         }
     }
@@ -55,7 +56,7 @@ class Digest extends DefaultTask {
 
     @InputFiles
     List<File> getSourceFiles() {
-        hashes*.toDigestArtifact.file
+        hashes*.digestArtifact.file
     }
 
     @OutputFiles
@@ -65,9 +66,9 @@ class Digest extends DefaultTask {
 
     @TaskAction
     void generate() {
-        hashes.each { DigestHash artifact ->
-            File digest = artifact.file
-            digest.text = MD5.digest(artifact.toDigestArtifact.file)
+        hashes.each { DigestHash digestHash ->
+            File digest = digestHash.file
+            digest.text = Digester.digest(digestHash.algo, digestHash.digestArtifact.file)
             digest
         }
     }

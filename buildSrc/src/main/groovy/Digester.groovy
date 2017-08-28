@@ -20,15 +20,29 @@
 
 import java.security.MessageDigest
 
-/**
- * Copied from Tapestry 5.
- */
-class MD5 {
+class Digester {
 
-    static String digest(File file) {
-        MessageDigest digest = MessageDigest.getInstance("MD5")
-        digest.update(file.bytes)
-        new BigInteger(1, digest.digest()).toString(16).padLeft(32, "0")
+    static String digest(String digestAlgo, File file) {
+        MessageDigest digest = MessageDigest.getInstance(digestAlgo)
+        file.withInputStream { inputStream ->
+            def buf = new byte[2048]
+            int bytesRead
+            while ((bytesRead = inputStream.read(buf)) != -1) {
+                digest.update(buf, 0, bytesRead)
+            }
+        }
+        int padding
+        switch (digestAlgo.toLowerCase(Locale.ROOT)) {
+            case 'sha-512':
+                padding = 128
+                break
+            case 'sha-256':
+                padding = 64
+                break
+            default:
+                padding = 32
+        }
+        new BigInteger(1, digest.digest()).toString(16).padLeft(padding, "0")
     }
 
 }
