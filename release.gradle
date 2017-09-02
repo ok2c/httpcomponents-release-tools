@@ -248,6 +248,15 @@ task svnmucc() {
     }
 }
 
+task promoteRC {
+    group = 'Release'
+    description = "Promotes release candiate to an official release."
+    doLast {
+        def releaseTool = new ReleaseTool(hcDir)
+        releaseTool.promoteReleaseCandidate()
+    }
+}
+
 task promoteDist() {
     group = 'Release'
     description = "Promotes dist to the release repository."

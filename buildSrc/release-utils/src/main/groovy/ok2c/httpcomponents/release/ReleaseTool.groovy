@@ -165,6 +165,28 @@ class ReleaseTool {
                 .call()
     }
 
+    void promoteReleaseCandidate() {
+        def pom = Pom.parsePom(dir)
+        def artifactId = pom.artifactId
+        def name = getProductName(artifactId)
+
+        def qualifier = pom.qualifier
+
+        if (qualifier.endsWith("SNAPSHOT")) {
+            println "Unexpected version: ${pom.version}"
+            return
+        }
+        def releaseVer = pom.version
+
+        println "Creating tag for ${name} ${releaseVer} release"
+        git.tag()
+                .setName(releaseVer)
+                .setAnnotated(true)
+                .setMessage("${name} ${releaseVer} release tag")
+                .call()
+        println "${releaseVer} tag created"
+    }
+
     private static def PROJECT_NAME_MAP = [
             'httpcore5-parent':'HttpCore',
             'httpclient5-parent':'HttpClient',
