@@ -225,15 +225,15 @@ task svnmucc() {
         println "release/httpcomponents/${productPath}/RELEASE_NOTES-${pom.major}.${pom.minor}.x.txt"
         println ""
         fileTree(rcDistDir).each { File file ->
-            def packageName = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
-            def classifier = file.name.startsWith(packageName) ? file.name.substring(packageName.length()) : ""
+            def prefix = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
+            def classifier = file.name.startsWith(prefix) ? file.name - prefix : ""
             println "mv"
             println "dev/httpcomponents/${rcFullName}/${file.name}"
             switch(classifier) {
-                case ~/^(osgi-)?bin/:
+                case ~/^(osgi-)?bin\..*$/:
                     println "release/httpcomponents/${productPath}/binary/${file.name}"
                     break
-                case "src":
+                case ~/^src\..*/:
                     println "release/httpcomponents/${productPath}/source/${file.name}"
                     break
                 default:
@@ -294,15 +294,15 @@ task promoteDist() {
         def bulkOps = []
         bulkOps.add(new SvnRm(new File("release/httpcomponents/${productPath}/RELEASE_NOTES-${pom.major}.${pom.minor}.x.txt")))
         fileTree(rcDistDir).each { File file ->
-            def packageName = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
-            def classifier = file.name.startsWith(packageName) ? file.name.substring(packageName.length()) : ""
+            def prefix = "${PackageNames.get(pom.artifactId)}-${pom.version}-"
+            def classifier = file.name.startsWith(prefix) ? file.name - prefix : ""
             File src = new File("${rcLocation}/${file.name}")
             File dst
             switch (classifier) {
-                case ~/^(osgi-)?bin/:
+                case ~/^(osgi-)?bin\..*$/:
                     dst = new File("release/httpcomponents/${productPath}/binary/${file.name}")
                     break
-                case "src":
+                case ~/^src\..*/:
                     dst = new File("release/httpcomponents/${productPath}/source/${file.name}")
                     break
                 default:
