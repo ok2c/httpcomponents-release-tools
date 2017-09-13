@@ -26,6 +26,7 @@ import org.tmatesoft.svn.cli.svn.SVNNotifyPrinter
 import org.tmatesoft.svn.cli.svn.SVNStatusPrinter
 import org.tmatesoft.svn.core.SVNCommitInfo
 import org.tmatesoft.svn.core.SVNDepth
+import org.tmatesoft.svn.core.SVNErrorCode
 import org.tmatesoft.svn.core.SVNException
 import org.tmatesoft.svn.core.SVNURL
 import org.tmatesoft.svn.core.auth.ISVNAuthenticationManager
@@ -89,6 +90,25 @@ class Svn {
             infoOp.setSingleTarget(SvnTarget.fromFile(dir))
             infoOp.run()
             infoOp.first()
+        } finally {
+            opfactory.dispose()
+        }
+    }
+
+    static SvnInfo infoRemote(URI uri) {
+        SVNCommandEnvironment env = getSVNCommandEnvironment()
+        SvnOperationFactory opfactory = createOperationFactory(env)
+        try {
+            SvnGetInfo infoOp = opfactory.createGetInfo()
+            infoOp.setSingleTarget(SvnTarget.fromURL(SVNURL.parseURIEncoded(uri.toASCIIString())))
+            infoOp.run()
+            infoOp.first()
+        } catch (SVNException ex) {
+            if (SVNErrorCode.RA_ILLEGAL_URL == ex.errorMessage.errorCode) {
+                null
+            } else {
+                throw ex
+            }
         } finally {
             opfactory.dispose()
         }

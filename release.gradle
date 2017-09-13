@@ -55,6 +55,44 @@ task cancelRC {
     }
 }
 
+task deleteDist() {
+    group = 'Release'
+    description = "Delete dist from the release repository."
+    doLast {
+        if (!project.'HC_DIST_DIR') {
+            println "HC dist staging directory is undefined"
+            return
+        }
+        def hcDistDir = file(project.'HC_DIST_DIR')
+
+        def pom = Pom.parsePom(hcDir)
+        def releaseTool = new ReleaseTool(hcDir)
+        def releaseTag = releaseTool.getReleaseTag()
+        if (!releaseTag) {
+            println "Release has not been tagged"
+            return
+        }
+        def productName = ProductNames.get(pom.artifactId)
+        def productPath = productName.toLowerCase(Locale.ROOT)
+        def rcFullName = "${productPath}-${releaseTag}"
+
+        def rcDistDir = file("${hcDistDir}/${rcFullName}")
+        if (!rcDistDir.exists()) {
+            println "RC dist ${rcDistDir} does not exist"
+            return
+        }
+        def localInfo = Svn.info(rcDistDir)
+        def repoRootURL = localInfo.repositoryRootUrl as String
+        def distUri = URI.create("${repoRootURL}/dev/httpcomponents/${rcFullName}")
+        def remoteInfo = Svn.infoRemote(distUri)
+        if (remoteInfo) {
+            Svn.deleteRemote(distUri, "Deleted ${productName} ${releaseTag} dist")
+            println "Deleted ${repoRootURL}/dev/httpcomponents/${rcFullName}"
+        }
+        Svn.update(file("${hcDistDir}"))
+    }
+}
+
 task nextSnapshot {
     group = 'Release'
     description = "Update project to the next SNAPSHOT version."
