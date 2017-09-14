@@ -172,7 +172,7 @@ class ReleaseTool {
 
         def qualifier = pom.qualifier
 
-        if (qualifier.endsWith("SNAPSHOT")) {
+        if (qualifier && qualifier.endsWith("SNAPSHOT")) {
             println "Unexpected version: ${pom.version}"
             return
         }
