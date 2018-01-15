@@ -6,3 +6,6 @@ HC_WEB_STAGE_DIR =
 signing.keyId=
 signing.password=
 signing.secretKeyRingFile=$HOME/.gnupg/secring.gpg
+
+# Use plain console
+org.gradle.console=plain
