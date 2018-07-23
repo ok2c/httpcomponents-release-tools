@@ -34,7 +34,6 @@ class Digest extends DefaultTask {
     void digest(PublishArtifact... artifacts) {
         for (PublishArtifact artifact in artifacts) {
             dependsOn(artifact)
-            hashes.add(new DigestHash(artifact, 'md5', 'md5'))
             hashes.add(new DigestHash(artifact, 'sha512', 'sha-512'))
         }
     }

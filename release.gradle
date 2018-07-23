@@ -214,7 +214,7 @@ task prepareVote() {
         println ""
         println "Hashes:"
         fileTree(rcDistDir).include('*.tar.gz', '*.zip').each { File file ->
-            def hash = new File(file.parentFile, file.name + '.md5')
+            def hash = new File(file.parentFile, file.name + '.sha512')
             if (hash.exists()) {
                 println " ${hash.text} ${file.name}"
             }
