@@ -142,13 +142,17 @@ task commitDist() {
         def productName = ProductNames.get(pom.artifactId)
         def rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${releaseTag}"
         def rcDistDir = file("${hcDistDir}/${rcFullName}")
-        println "Committing ${ProductNames.get(pom.artifactId)} ${pom.version} ${rc.qualifier} dist"
+        def rcQualifier = rc.qualifier
+        if (pom.qualifier && rcQualifier.startsWith(pom.qualifier + "-")) {
+            rcQualifier = rcQualifier.substring(pom.qualifier.length() + 1)
+        }
+        println "Committing ${ProductNames.get(pom.artifactId)} ${pom.version} ${rcQualifier} dist"
         copy {
             from "${project.buildDir}/dist"
             into rcDistDir
         }
         Svn.scheduleForAddition(rcDistDir)
-        def revision = Svn.commit(file("${hcDistDir}"), "${productName} ${pom.version} ${rc.qualifier} dist")
+        def revision = Svn.commit(file("${hcDistDir}"), "${productName} ${pom.version} ${rcQualifier} dist")
         println "Committed as r${revision}"
     }
 }
@@ -180,6 +184,9 @@ task prepareVote() {
         def productName = ProductNames.get(pom.artifactId)
         def rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${releaseTag}"
         def rcQualifier = rc.qualifier
+        if (pom.qualifier && rcQualifier.startsWith(pom.qualifier + "-")) {
+            rcQualifier = rcQualifier.substring(pom.qualifier.length() + 1)
+        }
 
         def rcDistDir = file("${hcDistDir}/${rcFullName}")
         if (!rcDistDir.exists()) {
