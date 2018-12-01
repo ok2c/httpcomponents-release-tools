@@ -67,21 +67,6 @@ CopySpec libs(Configuration cfg) {
     spec
 }
 
-CopySpec osgiLibs(File dir) {
-    CopySpec spec = copySpec {
-    }
-    hcPom.modules.each { submodule ->
-        if (submodule.name.endsWith('-osgi')) {
-            spec.from("${dir}/${submodule.name}/target") {
-                include "*.jar"
-                exclude "*-sources.jar"
-                exclude "*-javadoc.jar"
-            }
-        }
-    }
-    spec
-}
-
 CopySpec sources(File dir) {
     copySpec {
         from (dir) {
@@ -106,18 +91,6 @@ task distUxBin(type: Tar) {
     with docs(hcDir, Line.LF), libs(configurations.hc)
     into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
     classifier = 'bin'
-}
-
-task distWinOSGiBin(type: Zip) {
-    with docs(hcDir, Line.CRLF), osgiLibs(hcDir)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
-    classifier = 'osgi-bin'
-}
-
-task distUxOSGiBin(type: Tar) {
-    with docs(hcDir, Line.LF), osgiLibs(hcDir)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
-    classifier = 'osgi-bin'
 }
 
 task distWinSrc(type: Zip) {

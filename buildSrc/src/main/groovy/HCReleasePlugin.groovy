@@ -37,13 +37,10 @@ class HCReleasePlugin implements Plugin<Project> {
         }
         Pom hcPom = Pom.parsePom(hcDir)
         Configuration hcCfg = project.configurations.create('hc')
-        // Declare dependencies (excluding OSGi bundle)
         hcPom.modules.each { PomModule submodule ->
-            if (!submodule.name.endsWith('-osgi')) {
-                project.dependencies.add(
-                        hcCfg.name,
-                        ['group': submodule.artifact.groupId, 'name': submodule.artifact.id, 'version': submodule.artifact.version])
-            }
+            project.dependencies.add(
+                    hcCfg.name,
+                    ['group': submodule.artifact.groupId, 'name': submodule.artifact.id, 'version': submodule.artifact.version])
         }
         project.extensions.add('hcPom', hcPom)
         project.extensions.add('hcDir', hcDir)
