@@ -46,15 +46,6 @@ task createRC {
     }
 }
 
-task cancelRC {
-    group = 'Release'
-    description = "Cancel the actual release candiate."
-    doLast {
-        def releaseTool = new ReleaseTool(hcDir)
-        releaseTool.cancelRelease()
-    }
-}
-
 task deleteDist() {
     group = 'Release'
     description = "Delete dist from the release repository."

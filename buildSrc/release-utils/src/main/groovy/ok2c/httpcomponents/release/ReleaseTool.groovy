@@ -119,32 +119,6 @@ class ReleaseTool {
         println "${rcVer} tag created"
     }
 
-    void cancelRelease() {
-        def pom = Pom.parsePom(dir)
-
-        def artifactId = pom.artifactId
-        def name = getProductName(artifactId)
-
-        def qualifier = pom.qualifier
-        if (qualifier) {
-            println "Unexpected version: ${pom.version}"
-            return
-        }
-        def releaseVer = pom.version
-
-        println "Cancelling ${name} ${releaseVer} release"
-
-        def snapshotVer = releaseVer + '-SNAPSHOT'
-
-        ReleaseSupport.rewritePom(dir, snapshotVer)
-
-        println "Committing changes for snapshot ${name} ${snapshotVer}"
-        git.commit()
-                .setAll(true)
-                .setMessage("Cancelled ${name} ${releaseVer} release")
-                .call()
-    }
-
     void makeNextSnapshot() {
         def pom = Pom.parsePom(dir)
 
