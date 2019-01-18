@@ -266,7 +266,10 @@ task svnmucc() {
             println "mv"
             println "dev/httpcomponents/${rcFullName}/${file.name}"
             switch(classifier) {
-                case ~/^src\..*/:
+                case ~/^bin\..*$/:
+                    println "release/httpcomponents/${productPath}/binary/${file.name}"
+                    break
+                case ~/^src\..*$/:
                     println "release/httpcomponents/${productPath}/source/${file.name}"
                     break
                 default:
@@ -332,7 +335,10 @@ task promoteDist() {
             File src = new File("${rcLocation}/${file.name}")
             File dst
             switch (classifier) {
-                case ~/^src\..*/:
+                case ~/^bin\..*$/:
+                    dst = new File("release/httpcomponents/${productPath}/binary/${file.name}")
+                    break
+                case ~/^src\..*$/:
                     dst = new File("release/httpcomponents/${productPath}/source/${file.name}")
                     break
                 default:
