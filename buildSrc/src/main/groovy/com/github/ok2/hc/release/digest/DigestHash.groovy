@@ -17,7 +17,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
+package com.github.ok2.hc.release.digest
 
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.internal.artifacts.publish.AbstractPublishArtifact

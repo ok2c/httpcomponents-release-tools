@@ -18,25 +18,24 @@
  * under the License.
  */
 
-apply plugin: 'groovy'
+package com.github.ok2.hc.release
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 
-sourceCompatibility = 1.8
+class HCReleasePlugin implements Plugin<Project> {
 
-dependencies {
-
-    compile 'org.codehaus.groovy:groovy:2.4.11'
-    compile 'org.codehaus.groovy:groovy-xml:2.4.11'
-    compile 'org.apache.maven:maven-artifact:3.5.0'
-    compile 'org.jdom:jdom:2.0.2'
-    compile 'org.eclipse.jgit:org.eclipse.jgit:4.5.3.201708160445-r'
-    compile 'org.tmatesoft.svnkit:svnkit:1.8.14'
-    compile 'org.tmatesoft.svnkit:svnkit-cli:1.8.14'
-    compile 'org.slf4j:slf4j-simple:1.7.25'
-    compile 'org.slf4j:slf4j-api:1.7.25'
+    void apply(Project project) {
+        if (!project.'HC_RELEASE_DIR') {
+            throw new GradleException('HC release project dir not specified')
+        }
+        def hcDir = project.file(project.'HC_RELEASE_DIR')
+        if (!project.'HC_DIST_DIR') {
+            throw new GradleException('HC release staging dir not specified')
+        }
+        def stagingDir = project.file(project.'HC_DIST_DIR')
+        project.extensions.create("releaseTool", ReleaseTool, hcDir, stagingDir)
+    }
 
 }

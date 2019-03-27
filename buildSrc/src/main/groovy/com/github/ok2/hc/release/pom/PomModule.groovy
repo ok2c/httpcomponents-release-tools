@@ -18,16 +18,36 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.svn
+package com.github.ok2.hc.release.pom
 
-class SvnRm extends SvnBulkOp {
+class PomModule {
 
-    SvnRm(File path) {
-        super(path, null, -1)
+    final String name
+    final PomArtifact artifact
+
+    PomModule(String name, PomArtifact artifact) {
+        this.name = name
+        this.artifact = artifact
     }
 
-    SvnRm(String path) {
-        super(new File(path), null, -1)
+    String getName() {
+        return name
+    }
+
+    PomArtifact getArtifact() {
+        return artifact
+    }
+
+    String getGroupId() {
+        artifact.groupId
+    }
+
+    String getArtifactId() {
+        artifact.id
+    }
+
+    String getVersion() {
+        artifact.version
     }
 
 }

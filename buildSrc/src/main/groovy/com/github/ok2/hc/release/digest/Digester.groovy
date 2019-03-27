@@ -18,38 +18,33 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.pom
+package com.github.ok2.hc.release.digest
 
-class Scm {
+import java.security.MessageDigest
 
-    private final String connection
-    private final String tag
-    private final String uriPattern
+class Digester {
 
-    Scm(String connection, String tag, String uriPattern) {
-        this.connection = connection
-        this.tag = tag
-        this.uriPattern = uriPattern
-    }
-
-    String getConnection() {
-        return connection
-    }
-
-    String getTag() {
-        return tag
-    }
-
-    String getUriPattern() {
-        return uriPattern
-    }
-
-    URI getUri() {
-        if (uriPattern && tag) {
-            URI.create(uriPattern.replace('${project.scm.tag}', tag))
-        } else {
-            null
+    static String digest(String digestAlgo, File file) {
+        MessageDigest digest = MessageDigest.getInstance(digestAlgo)
+        file.withInputStream { inputStream ->
+            def buf = new byte[2048]
+            int bytesRead
+            while ((bytesRead = inputStream.read(buf)) != -1) {
+                digest.update(buf, 0, bytesRead)
+            }
         }
+        int padding
+        switch (digestAlgo.toLowerCase(Locale.ROOT)) {
+            case 'sha-512':
+                padding = 128
+                break
+            case 'sha-256':
+                padding = 64
+                break
+            default:
+                padding = 32
+        }
+        new BigInteger(1, digest.digest()).toString(16).padLeft(padding, "0")
     }
 
 }

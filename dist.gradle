@@ -18,6 +18,11 @@
  * under the License.
  */
 
+
+import com.github.ok2.hc.release.HCReleasePlugin
+import com.github.ok2.hc.release.Line
+import com.github.ok2.hc.release.digest.Digest
+
 apply plugin: HCReleasePlugin
 apply plugin: 'signing'
 
@@ -27,6 +32,23 @@ repositories {
 }
 
 /////////////////////////// Assembly  ////////////////////////////////////////
+
+ext {
+    hcPom = releaseTool.parsePom()
+    hcDir = releaseTool.dir
+    packageName = releaseTool.getPackageName(hcPom.artifactId)
+    distDir = file("${project.buildDir}/dist")
+}
+
+configurations {
+    hc
+}
+
+dependencies {
+    hcPom.modules.each { submodule ->
+        hc "${submodule.artifact.groupId}:${submodule.artifact.id}:${submodule.artifact.version}"
+    }
+}
 
 CopySpec docs(File dir, String delim) {
     CopySpec spec = copySpec {
@@ -83,32 +105,32 @@ CopySpec sources(File dir) {
 
 task distWinBin(type: Zip) {
     with docs(hcDir, Line.CRLF), libs(configurations.hc)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    into "${packageName}-${hcPom.version}"
     classifier = 'bin'
 }
 
 task distUxBin(type: Tar) {
     with docs(hcDir, Line.LF), libs(configurations.hc)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    into "${packageName}-${hcPom.version}"
     classifier = 'bin'
 }
 
 task distWinSrc(type: Zip) {
     with sources(hcDir)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    into "${packageName}-${hcPom.version}"
     classifier = 'src'
 }
 
 task distUxSrc(type: Tar) {
     with sources(hcDir)
-    into "${PackageNames.get(hcPom.artifactId)}-${hcPom.version}"
+    into "${packageName}-${hcPom.version}"
     classifier = 'src'
 }
 
 tasks.withType(AbstractArchiveTask) { archive ->
-    archive.baseName = PackageNames.get(hcPom.artifactId)
+    archive.baseName = packageName
     archive.version = hcPom.version
-    archive.destinationDir = file("${project.buildDir}/dist")
+    archive.destinationDir = distDir
 }
 
 tasks.withType(Tar) { tar ->
@@ -117,28 +139,31 @@ tasks.withType(Tar) { tar ->
 }
 
 configurations {
-    dist
-}
-
-task sign(type: Sign) {
-    sign configurations.dist
-}
-
-task digest(type: Digest) {
-    digest configurations.dist
-}
-
-task releaseNotes(type: Copy) {
-    from "${hcDir}/RELEASE_NOTES.txt"
-    into "${project.buildDir}/dist"
-    rename { "RELEASE_NOTES-${hcPom.major}.${hcPom.minor}.x.txt" }
+    pkgs
 }
 
 artifacts {
     tasks.withType(AbstractArchiveTask) { archive ->
-        dist archive
+        pkgs archive
     }
-    sign.signatures.each { PublishArtifact artifact ->
+}
+
+task sign(type: Sign) {
+    sign configurations.pkgs
+}
+
+task digest(type: Digest) {
+    digest configurations.pkgs
+}
+
+task releaseNotes(type: Copy) {
+    from "${hcDir}/RELEASE_NOTES.txt"
+    into distDir
+    rename { "RELEASE_NOTES-${hcPom.major}.${hcPom.minor}.x.txt" }
+}
+
+artifacts {
+    sign.signatures.each { artifact ->
         archives artifact
     }
     digest.hashes.each { artifact ->
@@ -148,22 +173,13 @@ artifacts {
 
 assemble.dependsOn = [sign, digest, releaseNotes]
 
-/////////////////////////// Release tasks  ////////////////////////////////////////
-
-task showDistDetails {
+task showDistArtefacts {
     group = 'Release'
     doLast {
         println "-----"
         println "Distribution ${hcPom.name} ${hcPom.version}"
         println "Repository tag ${hcPom.scm.tag}"
         println "Repository URL ${hcPom.scm.uri}"
-        println "-----"
-    }
-}
-
-task showDistArtefacts(dependsOn: showDistDetails) {
-    group = 'Release'
-    doLast {
         println "-----"
         println "Binary artifacts: "
         def binCfg = configurations.hc
@@ -172,7 +188,7 @@ task showDistArtefacts(dependsOn: showDistDetails) {
         }
         println "-----"
         println "Dist artifacts: "
-        def distCfg = configurations.dist
+        def distCfg = configurations.archives
         distCfg.artifacts.each { artifact ->
             println "- ${artifact.file}"
         }

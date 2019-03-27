@@ -18,36 +18,43 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.pom
+package com.github.ok2.hc.release.pom
 
-class PomModule {
+import org.apache.maven.artifact.versioning.ArtifactVersion
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 
-    final String name
-    final PomArtifact artifact
+class PomArtifact {
 
-    PomModule(String name, PomArtifact artifact) {
-        this.name = name
-        this.artifact = artifact
+    final String groupId
+    final String id
+    final String version
+    final private ArtifactVersion parsedVersion
+
+    PomArtifact(String groupId, String id, String version) {
+        this.groupId = groupId
+        this.id = id
+        this.version = version
+        this.parsedVersion = new DefaultArtifactVersion(version)
     }
 
-    String getName() {
-        return name
+    int getMajor() {
+        parsedVersion.majorVersion
     }
 
-    PomArtifact getArtifact() {
-        return artifact
+    int getMinor() {
+        parsedVersion.minorVersion
     }
 
-    String getGroupId() {
-        artifact.groupId
+    int getIncremental() {
+        parsedVersion.incrementalVersion
     }
 
-    String getArtifactId() {
-        artifact.id
+    int getBuildNumber() {
+        parsedVersion.buildNumber
     }
 
-    String getVersion() {
-        artifact.version
+    String getQualifier() {
+        parsedVersion.qualifier
     }
 
 }

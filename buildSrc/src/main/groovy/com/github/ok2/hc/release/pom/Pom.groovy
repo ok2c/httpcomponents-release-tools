@@ -18,7 +18,7 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.pom
+package com.github.ok2.hc.release.pom
 
 class Pom {
 

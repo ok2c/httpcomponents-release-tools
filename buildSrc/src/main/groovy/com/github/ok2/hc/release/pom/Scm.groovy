@@ -18,24 +18,38 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.svn
+package com.github.ok2.hc.release.pom
 
-class SvnCpFile extends SvnBulkOp {
+class Scm {
 
-    SvnCpFile(File path, File copyFrom, long revision) {
-        super(path, copyFrom, revision)
+    private final String connection
+    private final String tag
+    private final String uriPattern
+
+    Scm(String connection, String tag, String uriPattern) {
+        this.connection = connection
+        this.tag = tag
+        this.uriPattern = uriPattern
     }
 
-    SvnCpFile(File path, File copyFrom) {
-        super(path, copyFrom, -1)
+    String getConnection() {
+        return connection
     }
 
-    SvnCpFile(String path, String copyFrom, long revision) {
-        super(new File(path), new File(copyFrom), revision)
+    String getTag() {
+        return tag
     }
 
-    SvnCpFile(String path, String copyFrom) {
-        super(new File(path), new File(copyFrom), -1)
+    String getUriPattern() {
+        return uriPattern
+    }
+
+    URI getUri() {
+        if (uriPattern && tag) {
+            URI.create(uriPattern.replace('${project.scm.tag}', tag))
+        } else {
+            null
+        }
     }
 
 }

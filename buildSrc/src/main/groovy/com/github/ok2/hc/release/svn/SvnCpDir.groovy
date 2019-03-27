@@ -18,20 +18,24 @@
  * under the License.
  */
 
-import org.apache.tools.ant.filters.FixCrLfFilter
+package com.github.ok2.hc.release.svn
 
-class Line {
+class SvnCpDir extends SvnBulkOp {
 
-    static Class<? extends FilterReader> filter() {
-        FixCrLfFilter.class
+    SvnCpDir(File path, File copyFrom, long revision) {
+        super(path, copyFrom, revision)
     }
 
-    static Map<String, Object> delim(String s) {
-        ['eol': FixCrLfFilter.CrLf.newInstance(s), 'fixlast': false]
+    SvnCpDir(File path, File copyFrom) {
+        super(path, copyFrom, -1)
     }
 
-    static final String CRLF = 'crlf'
-    static final String LF = 'lf'
-    static final String ASIS = 'asis'
+    SvnCpDir(String path, String copyFrom, long revision) {
+        super(new File(path), new File(copyFrom), revision)
+    }
+
+    SvnCpDir(String path, String copyFrom) {
+        super(new File(path), new File(copyFrom), -1)
+    }
 
 }

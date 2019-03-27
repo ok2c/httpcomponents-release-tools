@@ -18,6 +18,8 @@
  * under the License.
  */
 
+package com.github.ok2.hc.release.digest
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.DomainObjectSet
 import org.gradle.api.artifacts.Configuration

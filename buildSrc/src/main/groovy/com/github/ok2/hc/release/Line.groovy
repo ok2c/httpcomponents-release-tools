@@ -18,5 +18,22 @@
  * under the License.
  */
 
-include 'release-utils'
+package com.github.ok2.hc.release
 
+import org.apache.tools.ant.filters.FixCrLfFilter
+
+class Line {
+
+    static Class<? extends FilterReader> filter() {
+        FixCrLfFilter.class
+    }
+
+    static Map<String, Object> delim(String s) {
+        ['eol': FixCrLfFilter.CrLf.newInstance(s), 'fixlast': false]
+    }
+
+    static final String CRLF = 'crlf'
+    static final String LF = 'lf'
+    static final String ASIS = 'asis'
+
+}

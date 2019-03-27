@@ -18,12 +18,16 @@
  * under the License.
  */
 
-import ok2c.httpcomponents.release.ReleaseTool
+package com.github.ok2.hc.release.svn
 
-class ProductNames {
+class SvnRm extends SvnBulkOp {
 
-    static def get(String artifactId) {
-        ReleaseTool.getProductName(artifactId)
+    SvnRm(File path) {
+        super(path, null, -1)
+    }
+
+    SvnRm(String path) {
+        super(new File(path), null, -1)
     }
 
 }

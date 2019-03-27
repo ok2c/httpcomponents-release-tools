@@ -18,7 +18,7 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.svn
+package com.github.ok2.hc.release.svn
 
 class SvnMkdir extends SvnBulkOp {
 

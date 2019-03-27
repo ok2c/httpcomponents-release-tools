@@ -18,16 +18,23 @@
  * under the License.
  */
 
-class PackageNames {
+package com.github.ok2.hc.release.svn
 
-    private static def PACKAGE_NAME_MAP = [
-            'httpcore5-parent':'httpcomponents-core',
-            'httpclient5-parent':'httpcomponents-client'
-    ]
+class SvnBulkOp {
 
-    static def get(String artifactId) {
-        String s = PACKAGE_NAME_MAP[artifactId]
-        s ? s : artifactId
+    final File path;
+    final File copyFrom;
+    final long revision;
+
+    protected SvnBulkOp(File path, File copyFrom, long revision) {
+        this.path = path
+        this.copyFrom = copyFrom
+        this.revision = revision
+    }
+
+    @Override
+    String toString() {
+        "op: ${getClass().simpleName}; path: ${path}; copyFrom=${copyFrom}; revision=${revision}"
     }
 
 }

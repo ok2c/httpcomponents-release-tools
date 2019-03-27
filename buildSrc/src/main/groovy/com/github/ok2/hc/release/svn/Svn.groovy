@@ -18,7 +18,7 @@
  * under the License.
  */
 
-package ok2c.httpcomponents.release.svn
+package com.github.ok2.hc.release.svn
 
 import org.tmatesoft.svn.cli.SVNConsoleAuthenticationProvider
 import org.tmatesoft.svn.cli.svn.SVNCommandEnvironment
