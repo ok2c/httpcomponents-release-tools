@@ -73,6 +73,7 @@ task commitDist() {
                 into distDir
             }
         }
+        project.delete("${project.buildDir}/dist")
     }
 }
 
