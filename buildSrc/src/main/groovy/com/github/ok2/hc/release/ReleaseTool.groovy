@@ -29,6 +29,7 @@ import com.github.ok2.hc.release.svn.SvnRm
 import org.apache.maven.artifact.versioning.ArtifactVersion
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.RepositoryCache
 import org.eclipse.jgit.util.FS
@@ -63,6 +64,10 @@ class ReleaseTool {
 
     File getStagingDir() {
         return stagingDir
+    }
+
+    Repository getRepository() {
+        return repository
     }
 
     Pom parsePom() {
@@ -135,10 +140,9 @@ class ReleaseTool {
             }
         }
 
-        def tagList = git.tagList()
-        def refs = tagList.call()
+        def tagRefs = git.tagList().call()
         def releaseTagRef = "refs/tags/${releaseVer}-RC"
-        def lastRC = refs
+        def lastRC = tagRefs
                 .grep { ref -> ref.name.startsWith(releaseTagRef) }
                 .collect( { ref -> ref.name.substring(releaseTagRef.length()) as Integer } )
                 .max()
@@ -208,7 +212,7 @@ class ReleaseTool {
 
         println "Creating tag for ${name} ${releaseVer} release"
         git.tag()
-                .setName(releaseVer)
+                .setName("rel/v${releaseVer}")
                 .setAnnotated(true)
                 .setMessage("${name} ${releaseVer} release tag")
                 .call()
@@ -497,17 +501,25 @@ class ReleaseTool {
     }
 
     void promoteDist() {
-        def releaseTag = git.describe().call()
-        if (!releaseTag) {
-            println "Release has not been tagged"
+        def headId = repository.resolve(Constants.HEAD);
+        def tagRefs = git.tagList().call()
+        def rcTagRef = tagRefs.find {ref ->
+            def peeledRef = repository.peel(ref)
+            peeledRef.peeledObjectId == headId && ref.name =~ /^.*-RC\d+$/
+        }
+
+        if (!rcTagRef) {
+            println "RC tag does not exist"
             return
         }
+
+        def rcTag = (rcTagRef.name =~ /^refs\/tags\/(.*)$/)[0][1]
 
         def pom = Pom.parsePom(dir)
         def productName = getProductName(pom.artifactId)
         def packageName = getPackageName(pom.artifactId)
         def productPath = productName.toLowerCase(Locale.ROOT)
-        def rcFullName = "${productPath}-${releaseTag}"
+        def rcFullName = "${productPath}-${rcTag}"
 
         def rcDistDir = new File(stagingDir, "${rcFullName}")
         if (!rcDistDir.exists()) {
