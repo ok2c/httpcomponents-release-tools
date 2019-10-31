@@ -237,7 +237,7 @@ class ReleaseTool {
         }
 
         if (qualifier) {
-            Matcher m = qualifier =~ '(alpha|beta|rc)(\\d)'
+            Matcher m = qualifier =~ '(alpha|beta|rc)(\\d+)'
             if (m.find()) {
                 int n = Integer.parseInt(m.group(2))
                 qualifier = m.group(1) + (++n)
