@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+Header of a sort
+with stuff
+in it
+
+ --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <parent>
+        <groupId>com.github.ok2</groupId>
+        <artifactId>ok2c-parent</artifactId>
+        <version>25</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.github.ok2.stuff</groupId>
+    <artifactId>stuff</artifactId>
+    <name>Stuff</name>
+    <version>1.2.3-SNAPSHOT</version>
+    <description>Some Stuff</description>
+    <url>https://somehost/stuff/</url>
+    <packaging>pom</packaging>
+
+    <!-- comment -->
+
+    <issueManagement>
+        <system>Jira</system>
+        <url>https://somehost/jira/browse/STUFF</url>
+    </issueManagement>
+
+    <!-- comment -->
+
+    <scm>
+        <connection>scm:git:https://somehost/repos/stuff.git</connection>
+        <developerConnection>scm:git:https://somehost/repos/stuff.git</developerConnection>
+        <url>https://somehost/stuff/tree/${project.scm.tag}</url>
+        <tag>master</tag>
+    </scm>
+
+    <modules>
+        <module>module1</module>
+        <module>module2</module>
+        <module>module3</module>
+    </modules>
+
+</project>

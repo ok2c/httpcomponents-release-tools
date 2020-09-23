@@ -3,9 +3,11 @@ HC_DIST_DIR =
 HC_WEBSITE_DIR =
 HC_WEB_STAGE_DIR =
 
-signing.keyId=
-signing.password=
-signing.secretKeyRingFile=$HOME/.gnupg/secring.gpg
+signing.gnupg.keyName=
 
 # Use plain console
 org.gradle.console=plain
+# Keep it quiet
+org.gradle.logging.level=quiet
+# Disable daemon
+org.gradle.daemon=false
