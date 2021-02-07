@@ -284,15 +284,6 @@ class HCReleasePlugin : Plugin<Project> {
                 copySpec.from("${releaseDir}/target/site/apidocs") {
                     it.into("javadoc")
                 }
-                copySpec.from("${releaseDir}/target/site/tutorial") {
-                    it.into("tutorial")
-                }
-                pom.modules.forEach { submodule ->
-                    copySpec.from("${releaseDir}/${submodule}/target/site/examples") {
-                        it.into("examples")
-                        it.filter(filerParams, FixCrLfFilter::class.java)
-                    }
-                }
             }
         }
 
