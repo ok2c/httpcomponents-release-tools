@@ -275,7 +275,7 @@ class HCReleasePlugin : Plugin<Project> {
             )
             project.copySpec { copySpec ->
                 copySpec.from("${releaseDir}") {
-                    it.include("README.txt")
+                    it.include("README.md")
                     it.include("LICENSE.txt")
                     it.include("NOTICE.txt")
                     it.include("RELEASE_NOTES.txt")
