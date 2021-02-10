@@ -5,6 +5,8 @@ import org.tmatesoft.svn.cli.svn.SVNCommandEnvironment
 import org.tmatesoft.svn.cli.svn.SVNNotifyPrinter
 import org.tmatesoft.svn.cli.svn.SVNStatusPrinter
 import org.tmatesoft.svn.core.SVNDepth
+import org.tmatesoft.svn.core.SVNErrorCode
+import org.tmatesoft.svn.core.SVNException
 import org.tmatesoft.svn.core.SVNURL
 import org.tmatesoft.svn.core.internal.wc2.compat.SvnCodec
 import org.tmatesoft.svn.core.io.SVNRepository
@@ -12,7 +14,6 @@ import org.tmatesoft.svn.core.io.SVNRepositoryFactory
 import org.tmatesoft.svn.core.wc.SVNRevision
 import org.tmatesoft.svn.core.wc.SVNWCUtil
 import org.tmatesoft.svn.core.wc2.*
-import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -62,6 +63,20 @@ class Svn {
             infoOp.run()
             infoOp.first()
         }
+    }
+
+    fun exists(uri: URI): Boolean {
+        try {
+            val svnInfo = infoRemote(uri)
+            if (svnInfo != null) {
+                return true
+            }
+        } catch (ex: SVNException) {
+            if (ex.errorMessage.errorCode != SVNErrorCode.RA_ILLEGAL_URL) {
+                throw ex
+            }
+        }
+        return false
     }
 
     fun checkout(src: URI, dst: Path) {

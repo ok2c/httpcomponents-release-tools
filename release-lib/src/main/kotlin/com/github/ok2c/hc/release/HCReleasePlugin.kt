@@ -37,6 +37,8 @@ import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.plugins.signing.Sign
+import org.tmatesoft.svn.core.SVNErrorCode
+import org.tmatesoft.svn.core.SVNException
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -612,11 +614,17 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
                     }
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
+
+                    val svn = Svn()
+                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"));
+
                     println("svnmucc file")
                     println("----------------8<-------------[ cut here ]------------------")
-                    println("rm")
-                    println("release/httpcomponents/${productPath}/${releaseNotes}")
-                    println()
+                    if (releaseNotesExist) {
+                        println("rm")
+                        println("release/httpcomponents/${productPath}/${releaseNotes}")
+                        println()
+                    }
                     val prefix = "${packageName}-${artefactVersion}-"
                     Files.newDirectoryStream(rcDistStagingDir).use {
                         it.forEach { path ->
@@ -669,13 +677,19 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
                     }
 
+                    val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
+
                     val svn = Svn()
+                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"));
+
                     val svnInfo = svn.info(rcDistStagingDir)
                     val rcLocation = svnInfo.url.toString().removePrefix("$HC_DIST_URI/")
 
                     val bulkOps = mutableListOf<SvnBulkOp>()
-                    val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
-                    bulkOps.add(SvnRmOp(Paths.get("release/httpcomponents/${productPath}/${releaseNotes}")))
+
+                    if (releaseNotesExist) {
+                        bulkOps.add(SvnRmOp(Paths.get("release/httpcomponents/${productPath}/${releaseNotes}")))
+                    }
 
                     val prefix = "${packageName}-${pom.version}-"
                     Files.newDirectoryStream(rcDistStagingDir).use {
