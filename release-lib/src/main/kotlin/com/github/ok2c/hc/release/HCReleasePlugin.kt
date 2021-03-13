@@ -801,6 +801,32 @@ class HCReleasePlugin : Plugin<Project> {
             }
         }
 
+        if (release) {
+
+            project.tasks.register("promoteSite") { it ->
+                it.group = "Release"
+                it.description = "Promotes project website content"
+                it.doLast {
+                    val siteUrl = pom.distributionManagement?.site?.url?:
+                    throw ReleaseException("Site URL not specified in POM distributionManagement")
+                    val svnUri = URI.create(if (siteUrl.startsWith(SCM_SVN)) siteUrl.substring(SCM_SVN.length) else siteUrl)
+
+                    if (!svnUri.scheme.equals("https", true) || !svnUri.isAbsolute || svnUri.path.isEmpty()) {
+                        throw ReleaseException("${svnUri} is not a valid deployment target")
+                    }
+                    val pathSegments = svnUri.rawPath.split("/").filter { segment -> segment.isNotBlank() }
+                    val targetUri = URI.create("https://${svnUri.rawAuthority}/${pathSegments.subList(0, pathSegments.size - 1).joinToString("/")}/${artefactVersion}")
+
+                    println("Moving project website content of ${productName} ${artefactVersion} to ${targetUri}")
+
+                    val svn = Svn()
+                    val revision = svn.moveRemote(svnUri, targetUri, "${productName} ${artefactVersion} release")
+                    println("Committed as r${revision}")
+                }
+            }
+
+        }
+
     }
 
 }

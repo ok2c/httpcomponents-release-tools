@@ -189,6 +189,20 @@ class Svn {
         }
     }
 
+    fun moveRemote(src: URI, dst: URI, message: String): Long {
+        return svn { opfactory ->
+            val copyOp = opfactory.createRemoteCopy()
+            copyOp.addCopySource(SvnCopySource.create(SvnTarget.fromURL(
+                SVNURL.parseURIEncoded(src.toASCIIString())), SVNRevision.HEAD))
+            copyOp.setSingleTarget(SvnTarget.fromURL(SVNURL.parseURIEncoded(dst.toASCIIString())))
+            copyOp.isFailWhenDstExists = true
+            copyOp.isMove = true
+            copyOp.commitMessage = message
+            val result = copyOp.run()
+            result.newRevision
+        }
+    }
+
     fun deleteRemote(src: URI, message: String) {
         svn { opfactory ->
             val deleteOp = opfactory.createRemoteDelete()
