@@ -148,7 +148,12 @@ class ArtefactVersion internal constructor(val sequence: List<Int>, val phase: D
 
 }
 
-class Pom(val name: String?, val parent: PomArtifact?, val artefact: PomArtifact?, val scm: Scm?, val modules: List<String>) {
+class Pom(val name: String?,
+          val parent: PomArtifact?,
+          val artefact: PomArtifact?,
+          val scm: Scm?,
+          val distributionManagement: DistributionManagement?,
+          val modules: List<String>) {
 
     val groupId: String? get() = artefact?.groupId ?: parent?.groupId
     val artefactId: String? get() = artefact?.id
@@ -192,6 +197,22 @@ class Scm(val connection: String?, val tag: String?, val uriPattern: String?) {
 
 }
 
+class DistributionManagement(val site: Site) {
+
+    override fun toString(): String {
+        return "DistributionManagement(site=$site)"
+    }
+
+}
+
+class Site(val id: String?, val name: String?, val url: String?) {
+
+    override fun toString(): String {
+        return "Site(id='$id', name='$name', url='$url')"
+    }
+
+}
+
 class PomTool {
 
     private fun createPomArtifact(groupId: String?, artifactId: String?, version: String?): PomArtifact? {
@@ -230,10 +251,17 @@ class PomTool {
                 scmElement.element("tag")?.textTrim,
                 scmElement.element("url")?.textTrim) else null
 
+        val dmElement = rootElement.element("distributionManagement")
+        val siteElement = dmElement?.element("site")
+        val dm = if (siteElement != null) DistributionManagement(
+            Site(siteElement.element("id")?.textTrim,
+                siteElement.element("name")?.textTrim,
+                siteElement.element("url")?.textTrim)) else null
+
         val modulesElement = rootElement.element("modules")
         val modules: List<String> = modulesElement?.elements("module")?.stream()?.map { it.textTrim }?.toList()
                 ?: emptyList()
-        return Pom(name, parentArtefact, artefact, scm, modules)
+        return Pom(name, parentArtefact, artefact, scm, dm, modules)
     }
 
     fun digest(reader: Reader): Pom {

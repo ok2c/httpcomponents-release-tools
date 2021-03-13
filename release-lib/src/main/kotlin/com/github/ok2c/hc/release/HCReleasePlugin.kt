@@ -18,6 +18,7 @@ package com.github.ok2c.hc.release
 import com.github.ok2c.hc.release.git.getAllTags
 import com.github.ok2c.hc.release.pom.PomArtifact
 import com.github.ok2c.hc.release.pom.PomTool
+import com.github.ok2c.hc.release.support.deleteContent
 import com.github.ok2c.hc.release.svn.Svn
 import com.github.ok2c.hc.release.svn.SvnBulkOp
 import com.github.ok2c.hc.release.svn.SvnCpFileOp
@@ -37,8 +38,6 @@ import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.plugins.signing.Sign
-import org.tmatesoft.svn.core.SVNErrorCode
-import org.tmatesoft.svn.core.SVNException
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -49,9 +48,9 @@ import java.util.stream.Collectors
 
 const val CRLF = "crlf"
 const val LF = "lf"
+const val SCM_SVN = "scm:svn:"
 
 const val HC_DIST_URI = "https://dist.apache.org/repos/dist"
-const val HC_WEBSITE_URI = "https://svn.apache.org/repos/asf/httpcomponents/site"
 
 val PROJECT_NAME_MAP = mapOf(
         "httpcore5-parent" to "HttpCore",
@@ -99,18 +98,6 @@ class HCReleasePlugin : Plugin<Project> {
             project.logger.warn("HC dist staging directory not specified")
         }
         val distStagingDir = if (p2 != null) Paths.get(p2) else null
-
-        val p3 = project.property("HC_WEBSITE_DIR") as String?
-        if (p3 == null) {
-            project.logger.warn("HC website dir not specified")
-        }
-        val websiteDir = if (p3 != null) Paths.get(p3) else null
-
-        val p4 = project.property("HC_WEB_STAGE_DIR") as String?
-        if (p4 == null) {
-            project.logger.warn("HC website staging dir not specified")
-        }
-        val websiteStagingDir = if (p4 != null) Paths.get(p4) else null
 
         val pomTool = PomTool()
         val pom = pomTool.digest(releaseDir.resolve("pom.xml"))
@@ -725,72 +712,95 @@ class HCReleasePlugin : Plugin<Project> {
 
         }
 
-        if (websiteStagingDir != null) {
-
-            project.tasks.register("prepareWebSiteStaging") {
-                it.group = "Release"
-                it.description = "Prepares website staging SVN directory"
-                it.doLast {
-                    println("-----")
-                    println("Dist staging location: ${websiteStagingDir}")
-                    val svn = Svn()
-                    if (Files.exists(websiteStagingDir)) {
-                        svn.update(websiteStagingDir)
-                    } else {
-                        svn.checkout(URI(HC_WEBSITE_URI), websiteStagingDir)
-                    }
+        val siteContent: (Path) -> CopySpec = { dir ->
+            project.copySpec { copySpec ->
+                copySpec.from("${dir}/target/site") {
+                    it.exclude("**/*.html")
+                }
+                copySpec.from("${dir}/target/site") {
+                    it.include("**/*.html")
+                    it.filter(FixCrLfFilter::class.java)
                 }
             }
-
-            val siteContent: (Path) -> CopySpec = { dir ->
-                project.copySpec { copySpec ->
-                    copySpec.from("${dir}/target/site") {
-                        it.exclude("**/*.html")
-                    }
-                    copySpec.from("${dir}/target/site") {
-                        it.include("**/*.html")
-                        it.filter(FixCrLfFilter::class.java)
-                    }
-                }
-            }
-
-            project.tasks.register("copyReleaseWebContent") {
-                it.group = "Release"
-                it.description = "Copies release content to the website staging SVN directory"
-                it.doLast {
-                    val releaseSeries = "${packageName}-${artefactVersion.major}.${artefactVersion.minor}.x"
-                    val releaseStagingDir = websiteStagingDir.resolve(releaseSeries)
-                    println("Copying content of ${productName} ${artefactVersion} release to ${releaseStagingDir}")
-                    project.copy { copy ->
-                        copy.into(releaseStagingDir)
-                        copy.with(siteContent(releaseDir))
-                    }
-                    for (module in pom.modules) {
-                        project.copy { copy ->
-                            copy.into(releaseStagingDir.resolve(module))
-                            copy.with(siteContent(releaseDir.resolve(module)))
-                        }
-                    }
-                }
-            }
-
-            if (websiteDir != null) {
-
-                project.tasks.register("copyProjectWebContent") {
-                    it.group = "Release"
-                    it.description = "Copies project content to the website staging SVN directory"
-                    it.doLast {
-                        println("Copying project website content to ${websiteStagingDir}")
-                        project.copy { copy ->
-                            copy.into(websiteStagingDir)
-                            copy.with(siteContent(websiteDir))
-                        }
-                    }
-                }
-
-            }
-
         }
+
+        project.tasks.register("stageSite") {
+            it.group = "Release"
+            it.description = "Stages project website content"
+            it.doLast {
+                val stagingDir = project.buildDir.toPath().resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site")
+                if (!Files.exists(stagingDir)) {
+                    Files.createDirectory(stagingDir)
+                } else {
+                    deleteContent(stagingDir)
+                }
+                println("Staging project website content of ${productName} ${artefactVersion} to ${stagingDir}")
+                project.copy { copy ->
+                    copy.into(stagingDir)
+                    copy.with(siteContent(releaseDir))
+                }
+                for (module in pom.modules) {
+                    project.copy { copy ->
+                        copy.into(stagingDir.resolve(module))
+                        copy.with(siteContent(releaseDir.resolve(module)))
+                    }
+                }
+            }
+        }
+
+        project.tasks.register("deploySite") { it ->
+            it.group = "Release"
+            it.description = "Deploys project website content"
+            it.doLast {
+
+                val siteUrl = pom.distributionManagement?.site?.url?:
+                    throw ReleaseException("Site URL not specified in POM distributionManagement")
+                val svnUri = URI.create(if (siteUrl.startsWith(SCM_SVN)) siteUrl.substring(SCM_SVN.length) else siteUrl)
+
+                if (!svnUri.scheme.equals("https", true) || !svnUri.isAbsolute || svnUri.path.isEmpty()) {
+                    throw ReleaseException("${svnUri} is not a valid deployment target")
+                }
+                val pathSegments = svnUri.rawPath.split("/").filter { segment -> segment.isNotBlank() }
+                val targetName = pathSegments.last()
+                val baseUri = URI.create("https://${svnUri.rawAuthority}/${pathSegments.subList(0, pathSegments.size - 1).joinToString("/")}")
+                val stagingDir = project.buildDir.toPath().resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site-checkout")
+
+                println("Checking out project website content from ${baseUri} to ${stagingDir}")
+
+                val svn = Svn()
+                if (Files.exists(stagingDir)) {
+                    svn.cleanup(stagingDir)
+                    svn.update(stagingDir)
+                } else {
+                    svn.checkout(baseUri, stagingDir)
+                }
+
+                val targetDir = stagingDir.resolve(targetName)
+                println("Staging project website content of ${productName} ${artefactVersion} to ${targetDir}")
+
+                if (Files.exists(targetDir)) {
+                    deleteContent(targetDir)
+                } else {
+                    Files.createDirectory(targetDir)
+                }
+
+                project.copy { copy ->
+                    copy.into(targetDir)
+                    copy.with(siteContent(releaseDir))
+                }
+                for (module in pom.modules) {
+                    project.copy { copy ->
+                        copy.into(targetDir.resolve(module))
+                        copy.with(siteContent(releaseDir.resolve(module)))
+                    }
+                }
+                svn.scheduleForAddition(targetDir)
+
+                val revision = svn.commit(stagingDir, "${productName} ${artefactVersion} project content")
+                println("Committed as r${revision}")
+            }
+        }
+
     }
 
 }

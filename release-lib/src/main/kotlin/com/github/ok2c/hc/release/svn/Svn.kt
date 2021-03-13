@@ -130,6 +130,17 @@ class Svn {
         }
     }
 
+    fun cleanup(dir: Path) {
+        svn { opfactory ->
+            val cleanUpOp = opfactory.createCleanup()
+            cleanUpOp.setSingleTarget(SvnTarget.fromFile(dir.toFile()))
+            cleanUpOp.depth = SVNDepth.INFINITY
+            cleanUpOp.isRemoveUnversionedItems = true
+            cleanUpOp.isRemoveIgnoredItems = true
+            cleanUpOp.run()
+        }
+    }
+
     fun scheduleForAddition(dir: Path) {
         svn { opfactory ->
             val schedulingOp = opfactory.createScheduleForAddition()
