@@ -212,6 +212,9 @@ class HCReleasePlugin : Plugin<Project> {
                             .call()
                     println("${rcVer} tag created")
                 }
+
+                val dir = project.mkdir(distDir)
+                project.delete(project.fileTree(dir))
             }
         }
 
@@ -708,6 +711,7 @@ class HCReleasePlugin : Plugin<Project> {
                     println("Committed as r${revision}")
 
                     project.delete(rcDistStagingDir)
+                    project.delete(distDir)
                 }
 
             }
