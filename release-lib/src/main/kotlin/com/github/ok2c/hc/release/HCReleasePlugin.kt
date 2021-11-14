@@ -37,6 +37,7 @@ import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.internal.impldep.org.apache.ivy.util.FileUtil
 import org.gradle.plugins.signing.Sign
 import java.io.File
 import java.net.URI
@@ -554,7 +555,8 @@ class HCReleasePlugin : Plugin<Project> {
                     val distPattern = Regex("^.*\\.(zip|tar\\.gz)$")
                     Files.newDirectoryStream(rcDistStagingDir).use {
                         it.filter { path ->
-                            distPattern.matches(path.fileName.toString())
+                            val filename = path.fileName.toString();
+                            distPattern.matches(filename) && filename.startsWith("${packageName}-${artefactVersion}")
                         }.forEach {path ->
                             val hash = path.parent.resolve(path.fileName.toString() + ".sha512")
                             if (Files.exists(hash)) {
