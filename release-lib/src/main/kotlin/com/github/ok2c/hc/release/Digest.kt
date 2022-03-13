@@ -81,6 +81,8 @@ open class Digest : DefaultTask() {
             val hash = digester.digest(digestHash.algo, digestHash.digestArtifact.file)
             FileWriter(file).use {
                 it.write(hash)
+                it.write(" ")
+                it.write(digestHash.digestArtifact.file.name)
             }
         }
     }
