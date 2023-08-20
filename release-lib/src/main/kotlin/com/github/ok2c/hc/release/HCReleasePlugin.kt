@@ -37,7 +37,6 @@ import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
-import org.gradle.internal.impldep.org.apache.ivy.util.FileUtil
 import org.gradle.plugins.signing.Sign
 import java.io.File
 import java.net.URI
