@@ -87,17 +87,17 @@ class HCReleasePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
         val p1 = project.property("HC_RELEASE_DIR") as String?
-        if (p1 == null) {
+        val releaseDir = if (!p1.isNullOrBlank()) Paths.get(p1) else null
+        if (releaseDir == null) {
             project.logger.warn("HC release directory not specified")
             return
         }
-        val releaseDir = Paths.get(p1)
 
         val p2 = project.property("HC_DIST_DIR") as String?
-        if (p2 == null) {
+        val distStagingDir = if (!p2.isNullOrBlank()) Paths.get(p2) else null
+        if (distStagingDir == null) {
             project.logger.warn("HC dist staging directory not specified")
         }
-        val distStagingDir = if (p2 != null) Paths.get(p2) else null
 
         val pomTool = PomTool()
         val pom = pomTool.digest(releaseDir.resolve("pom.xml"))
