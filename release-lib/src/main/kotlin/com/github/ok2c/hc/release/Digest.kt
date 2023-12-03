@@ -24,6 +24,7 @@ import org.gradle.api.internal.CollectionCallbackActionDecorator
 import org.gradle.api.internal.DefaultDomainObjectSet
 import org.gradle.api.internal.artifacts.publish.AbstractPublishArtifact
 import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 import java.io.File
@@ -32,6 +33,7 @@ import java.util.*
 
 open class Digest : DefaultTask() {
 
+    @Internal
     val hashes = DefaultDomainObjectSet<DigestHash>(DigestHash::class.java, CollectionCallbackActionDecorator.NOOP)
 
     fun digest(artifact: PublishArtifact) {
