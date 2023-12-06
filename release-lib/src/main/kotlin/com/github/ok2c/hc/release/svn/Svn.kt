@@ -8,6 +8,7 @@ import org.tmatesoft.svn.core.SVNDepth
 import org.tmatesoft.svn.core.SVNErrorCode
 import org.tmatesoft.svn.core.SVNException
 import org.tmatesoft.svn.core.SVNURL
+import org.tmatesoft.svn.core.auth.ISVNAuthenticationManager
 import org.tmatesoft.svn.core.internal.wc2.compat.SvnCodec
 import org.tmatesoft.svn.core.io.SVNRepository
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory
@@ -20,13 +21,18 @@ import java.nio.file.Paths
 
 class Svn {
 
+    private fun createAuthManager(): ISVNAuthenticationManager {
+        val configDir = SVNWCUtil.getDefaultConfigurationDirectory()
+        val authmanager = SVNWCUtil.createDefaultAuthenticationManager(configDir, null, CharArray(0), false)
+        authmanager.setAuthenticationProvider(SVNConsoleAuthenticationProvider(false))
+        return authmanager
+    }
+
     private fun <R> svn(block: (SvnOperationFactory) -> R): R {
         val env = SVNCommandEnvironment("SVN", System.out, System.err, System.`in`)
         val opfactory = SvnOperationFactory()
         return try {
-            val authmanager = SVNWCUtil.createDefaultAuthenticationManager()
-            authmanager.setAuthenticationProvider(SVNConsoleAuthenticationProvider(false))
-            opfactory.authenticationManager = authmanager
+            opfactory.authenticationManager = createAuthManager()
             opfactory.eventHandler = SVNNotifyPrinter(env)
             block(opfactory)
         } finally {
@@ -38,9 +44,7 @@ class Svn {
         val url = SVNURL.parseURIEncoded(src.toASCIIString())
         val repo = SVNRepositoryFactory.create(url)
         return try {
-            val authmanager = SVNWCUtil.createDefaultAuthenticationManager()
-            authmanager.setAuthenticationProvider(SVNConsoleAuthenticationProvider(false))
-            repo.authenticationManager = authmanager
+            repo.authenticationManager = createAuthManager()
             block(repo)
         } finally {
             repo.closeSession()

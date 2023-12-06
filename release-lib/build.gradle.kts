@@ -30,7 +30,7 @@ object Versions {
     const val dom4j = "2.1.3"
     const val `pull-parser` = "2.1.10"
     const val jgit = "4.5.3.201708160445-r"
-    const val svnkit = "1.10.1"
+    const val svnkit = "1.10.11"
     const val tagsoup = "1.2.1"
     const val slf4j = "1.7.30"
     const val `junit-jupiter` = "5.6.0"
