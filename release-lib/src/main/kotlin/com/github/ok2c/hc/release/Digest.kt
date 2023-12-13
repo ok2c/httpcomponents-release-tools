@@ -94,7 +94,7 @@ open class Digest : DefaultTask() {
 open class DigestHash(
         val digestArtifact: PublishArtifact,
         private val extension: String,
-        val algo: String) : AbstractPublishArtifact() {
+        val algo: String) : AbstractPublishArtifact(null) {
 
     override fun getName(): String {
         return digestArtifact.name
