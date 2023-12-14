@@ -1,0 +1,23 @@
+[versions]
+dom4j = "2.1.3"
+pullparser = "2.1.10"
+jgit = "4.5.3.201708160445-r"
+svnkit = "1.10.11"
+tagsoup = "1.2.1"
+slf4j = "1.7.30"
+junit-jupiter = "5.6.0"
+mockito = "2.28.2"
+assertj = "3.15.0"
+
+[libraries]
+dom4j = { group = "org.dom4j", name = "dom4j", version.ref = "dom4j" }
+pullparser = { group = "pull-parser", name = "pull-parser", version.ref = "pullparser" }
+jgit = { group = "org.eclipse.jgit", name = "org.eclipse.jgit", version.ref = "jgit" }
+svnkit = { group = "org.tmatesoft.svnkit", name = "svnkit", version.ref = "svnkit" }
+svnkit-cli = { group = "org.tmatesoft.svnkit", name = "svnkit-cli", version.ref = "svnkit" }
+tagsoup = { group = "org.ccil.cowan.tagsoup", name = "tagsoup", version.ref = "tagsoup" }
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
+junit-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit-jupiter" }
+junit-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit-jupiter" }
+assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
