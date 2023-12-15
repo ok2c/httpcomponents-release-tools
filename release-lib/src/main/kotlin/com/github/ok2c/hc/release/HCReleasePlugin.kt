@@ -83,6 +83,20 @@ fun prompt(message: String, defaultValue: String): String {
 class HCReleasePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
+
+        project.tasks.register("checkConsole") {
+            it.group = "Utility"
+            it.description = "Tests if the console is available"
+            it.doLast {
+                val console = System.console()
+                if (console == null) {
+                    println("WARNING: console is not available")
+                } else {
+                    console.printf("Console looks fine\r\n")
+                }
+            }
+        }
+
         val p1 = project.property("HC_RELEASE_DIR") as String?
         val releaseDir = if (!p1.isNullOrBlank()) Paths.get(p1) else null
         if (releaseDir == null) {
