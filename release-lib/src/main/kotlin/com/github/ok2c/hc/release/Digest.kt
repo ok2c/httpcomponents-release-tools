@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.internal.CollectionCallbackActionDecorator
 import org.gradle.api.internal.DefaultDomainObjectSet
 import org.gradle.api.internal.artifacts.publish.AbstractPublishArtifact
+import org.gradle.api.internal.tasks.DefaultTaskDependencyFactory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFiles
@@ -94,7 +95,7 @@ open class Digest : DefaultTask() {
 open class DigestHash(
         val digestArtifact: PublishArtifact,
         private val extension: String,
-        val algo: String) : AbstractPublishArtifact(null) {
+        val algo: String) : AbstractPublishArtifact(DefaultTaskDependencyFactory.withNoAssociatedProject()) {
 
     override fun getName(): String {
         return digestArtifact.name
