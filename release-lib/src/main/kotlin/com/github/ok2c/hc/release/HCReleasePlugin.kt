@@ -38,12 +38,10 @@ import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.plugins.signing.Sign
-import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
 import java.util.stream.Collectors
 
 const val CRLF = "crlf"
@@ -128,7 +126,7 @@ class HCReleasePlugin : Plugin<Project> {
             }
         }
 
-        val distDir = project.file(File(project.buildDir, "${packageName}-${artefactVersion.major}.${artefactVersion.minor}-dist"))
+        val distDir = Paths.get(project.layout.buildDirectory.get().toString()).resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-dist")
 
         project.tasks.register("releaseDetails") {
             it.group = "Release"
@@ -167,9 +165,9 @@ class HCReleasePlugin : Plugin<Project> {
 
                 val lastRC = repoGit(releaseDir) { git ->
                     RevWalk(git.repository).use {
-                        val releasePattern = "${releaseVersion}-RC"
-                        val refMap = git.repository.refDatabase.getRefs(Constants.R_TAGS)
-                        refMap.keys.stream()
+                        val releasePattern = "refs/tags/${releaseVersion}-RC"
+                        git.repository.refDatabase.getRefsByPrefix(Constants.R_TAGS).stream()
+                                .map { ref -> ref.name }
                                 .filter { ref -> ref.startsWith(releasePattern) }
                                 .map { ref ->
                                     val s = ref.substring(releasePattern.length)
@@ -225,9 +223,9 @@ class HCReleasePlugin : Plugin<Project> {
 
                 println("Upgrading ${productName} from ${artefactVersion} to ${snapshotVersion}")
 
-                pomTool.updatePomVersion(releaseDir.resolve("pom.xml"), snapshotVersion.toString())
+                pomTool.updatePomVersion(releaseDir.resolve("pom.xml"), snapshotVersion)
                 for (module in pom.modules) {
-                    pomTool.updatePomVersion(releaseDir.resolve(module).resolve("pom.xml"), snapshotVersion.toString())
+                    pomTool.updatePomVersion(releaseDir.resolve(module).resolve("pom.xml"), snapshotVersion)
                 }
 
                 repoGit(releaseDir) { git ->
@@ -338,7 +336,7 @@ class HCReleasePlugin : Plugin<Project> {
         project.tasks.withType(AbstractArchiveTask::class.java) { archive ->
             archive.archiveBaseName.set(packageName)
             archive.archiveVersion.set("${artefactVersion}")
-            archive.destinationDirectory.set(distDir)
+            archive.destinationDirectory.set(distDir.toFile())
         }
 
         project.tasks.withType(Tar::class.java) { tar ->
@@ -445,7 +443,7 @@ class HCReleasePlugin : Plugin<Project> {
                         val describeCommand = git.describe()
                         describeCommand.call()
                     } ?: throw ReleaseException("Release has not been tagged")
-                    val rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${releaseTag}"
+                    val rcFullName = "${productName.lowercase()}-${releaseTag}"
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
                     if (Files.exists(rcDistStagingDir)) {
                         val svn = Svn()
@@ -485,7 +483,7 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("Inconsistent POM and RC tag versions: POM = ${artefactVersion}; RC tag = ${rcTag}")
                     }
 
-                    val rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${rcTag}"
+                    val rcFullName = "${productName.lowercase()}-${rcTag}"
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
 
                     project.copy { copySpec ->
@@ -520,8 +518,8 @@ class HCReleasePlugin : Plugin<Project> {
                             artefactVersion.patch != rc.patch) {
                         throw ReleaseException("Inconsistent POM and RC tag versions: POM = ${artefactVersion}; RC tag = ${rcTag}")
                     }
-                    val rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${rcTag}"
-                    val productPath = productName.toLowerCase(Locale.ROOT)
+                    val rcFullName = "${productName.lowercase()}-${rcTag}"
+                    val productPath = productName.lowercase()
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
                     if (Files.notExists(rcDistStagingDir)) {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
@@ -556,7 +554,7 @@ class HCReleasePlugin : Plugin<Project> {
                     val distPattern = Regex("^.*\\.(zip|tar\\.gz)$")
                     Files.newDirectoryStream(rcDistStagingDir).use {
                         it.filter { path ->
-                            val filename = path.fileName.toString();
+                            val filename = path.fileName.toString()
                             distPattern.matches(filename) && filename.startsWith("${packageName}-${artefactVersion}")
                         }.forEach {path ->
                             val hash = path.parent.resolve(path.fileName.toString() + ".sha512")
@@ -597,8 +595,8 @@ class HCReleasePlugin : Plugin<Project> {
                             artefactVersion.patch != rc.patch) {
                         throw ReleaseException("Inconsistent POM and RC tag versions: POM = ${artefactVersion}; RC tag = ${rcTag}")
                     }
-                    val rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${rcTag}"
-                    val productPath = productName.toLowerCase(Locale.ROOT)
+                    val rcFullName = "${productName.lowercase()}-${rcTag}"
+                    val productPath = productName.lowercase()
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
                     if (Files.notExists(rcDistStagingDir)) {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
@@ -606,7 +604,7 @@ class HCReleasePlugin : Plugin<Project> {
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
                     val svn = Svn()
-                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"));
+                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
 
                     println("svnmucc file")
                     println("----------------8<-------------[ cut here ]------------------")
@@ -660,8 +658,8 @@ class HCReleasePlugin : Plugin<Project> {
                             artefactVersion.patch != rc.patch) {
                         throw ReleaseException("Inconsistent POM and RC tag versions: POM = ${artefactVersion}; RC tag = ${rcTag}")
                     }
-                    val rcFullName = "${productName.toLowerCase(Locale.ROOT)}-${rcTag}"
-                    val productPath = productName.toLowerCase(Locale.ROOT)
+                    val rcFullName = "${productName.lowercase()}-${rcTag}"
+                    val productPath = productName.lowercase()
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
                     if (Files.notExists(rcDistStagingDir)) {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
@@ -670,7 +668,7 @@ class HCReleasePlugin : Plugin<Project> {
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
                     val svn = Svn()
-                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"));
+                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
 
                     val svnInfo = svn.info(rcDistStagingDir)
                     val rcLocation = svnInfo.url.toString().removePrefix("$HC_DIST_URI/")
@@ -732,7 +730,7 @@ class HCReleasePlugin : Plugin<Project> {
             it.group = "Release"
             it.description = "Stages project website content"
             it.doLast {
-                val stagingDir = project.buildDir.toPath().resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site")
+                val stagingDir = Paths.get(project.layout.buildDirectory.get().toString()).resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site")
                 if (!Files.exists(stagingDir)) {
                     Files.createDirectory(stagingDir)
                 } else {
@@ -767,7 +765,7 @@ class HCReleasePlugin : Plugin<Project> {
                 val pathSegments = svnUri.rawPath.split("/").filter { segment -> segment.isNotBlank() }
                 val targetName = pathSegments.last()
                 val baseUri = URI.create("https://${svnUri.rawAuthority}/${pathSegments.subList(0, pathSegments.size - 1).joinToString("/")}")
-                val stagingDir = project.buildDir.toPath().resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site-checkout")
+                val stagingDir = Paths.get(project.layout.buildDirectory.get().toString()).resolve("${packageName}-${artefactVersion.major}.${artefactVersion.minor}-site-checkout")
 
                 println("Checking out project website content from ${baseUri} to ${stagingDir}")
 
