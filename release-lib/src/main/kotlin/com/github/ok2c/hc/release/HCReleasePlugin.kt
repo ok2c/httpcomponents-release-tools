@@ -399,6 +399,7 @@ class HCReleasePlugin : Plugin<Project> {
                 copy.into(distDir)
                 copy.rename { "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt" }
             }
+            releaseNotesCopy.get().mustRunAfter(digest, sign)
 
             project.tasks.getByName("assemble").dependsOn(digest, sign, releaseNotesCopy)
         }
