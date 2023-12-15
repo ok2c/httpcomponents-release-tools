@@ -56,8 +56,7 @@ val PROJECT_NAME_MAP = mapOf(
         "httpcore5-parent" to "HttpCore",
         "httpclient5-parent" to "HttpClient",
         "httpcomponents-core" to "HttpCore",
-        "httpcomponents-client" to "HttpClient",
-        "httpcomponents-asyncclient" to "HttpAsyncClient"
+        "httpcomponents-client" to "HttpClient"
 )
 
 val PACKAGE_NAME_MAP = mapOf(
