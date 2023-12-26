@@ -69,6 +69,14 @@ class Svn {
         }
     }
 
+    fun mkdirRemote(uri: URI) {
+        return svn { opfactory ->
+            val mkDirOp = opfactory.createRemoteMkDir()
+            mkDirOp.setSingleTarget(SvnTarget.fromURL(SVNURL.parseURIEncoded(uri.toASCIIString())))
+            mkDirOp.run()
+        }
+    }
+
     fun exists(uri: URI): Boolean {
         try {
             val svnInfo = infoRemote(uri)

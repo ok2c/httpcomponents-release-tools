@@ -38,6 +38,8 @@ import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.plugins.signing.Sign
+import org.tmatesoft.svn.core.SVNErrorCode
+import org.tmatesoft.svn.core.SVNException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -789,7 +791,15 @@ class HCReleasePlugin : Plugin<Project> {
                     svn.cleanup(stagingDir)
                     svn.update(stagingDir)
                 } else {
-                    svn.checkout(baseUri, stagingDir)
+                    try {
+                        svn.checkout(baseUri, stagingDir)
+                    } catch (ex: SVNException) {
+                        if (ex.errorMessage?.errorCode == SVNErrorCode.RA_ILLEGAL_URL) {
+                            svn.mkdirRemote(baseUri)
+                        } else {
+                            throw ex
+                        }
+                    }
                 }
 
                 val targetDir = stagingDir.resolve(targetName)
