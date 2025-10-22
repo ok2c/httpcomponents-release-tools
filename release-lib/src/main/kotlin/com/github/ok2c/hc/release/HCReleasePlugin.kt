@@ -99,14 +99,14 @@ class HCReleasePlugin : Plugin<Project> {
             }
         }
 
-        val p1 = project.property("HC_RELEASE_DIR") as String?
+        val p1 = project.findProperty("HC_RELEASE_DIR") as String?
         val releaseDir = if (!p1.isNullOrBlank()) Paths.get(p1) else null
         if (releaseDir == null) {
             project.logger.warn("HC release directory not specified")
             return
         }
 
-        val p2 = project.property("HC_DIST_DIR") as String?
+        val p2 = project.findProperty("HC_DIST_DIR") as String?
         val distStagingDir = if (!p2.isNullOrBlank()) Paths.get(p2) else null
         if (distStagingDir == null) {
             project.logger.warn("HC dist staging directory not specified")
