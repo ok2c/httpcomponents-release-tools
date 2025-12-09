@@ -333,6 +333,8 @@ class HCReleasePlugin : Plugin<Project> {
                 tar.with(docs(LF), libs())
             }
 
+        } else {
+            println("HC configuration ${hc.state}")
         }
 
         project.tasks.register("distSrcZip", Zip::class.java) { zip ->
@@ -364,6 +366,32 @@ class HCReleasePlugin : Plugin<Project> {
 
         project.tasks.withType(AbstractArchiveTask::class.java) { archive ->
             project.artifacts.add("distPackages", archive)
+        }
+
+        project.tasks.register("showDistArtefacts") {
+            it.group = "Release"
+            it.description = "Shows release artifacts and dist packages"
+            it.doLast {
+                println("-----")
+                println("Distribution ${pom.name} ${pom.version}")
+                println("Repository tag ${pom.scm?.tag}")
+                println("Repository URL ${pom.scm?.uri}")
+                println("-----")
+                println("Binary artifacts: ")
+                val resolvedArtifacts = hc.resolvedConfiguration.resolvedArtifacts
+                for (artifact in resolvedArtifacts) {
+                    println("- ${artifact.file}")
+                }
+                val archives = project.configurations.getByName("archives")
+                println("-----")
+                println("Dist artifacts: ")
+                for (artifact in archives.allArtifacts) {
+                    if (artifact.file.exists()) {
+                        println("- ${artifact.file}")
+                    }
+                }
+                println("-----")
+            }
         }
 
         if (release) {
@@ -404,32 +432,6 @@ class HCReleasePlugin : Plugin<Project> {
             releaseNotesCopy.get().mustRunAfter(digest, sign)
 
             project.tasks.getByName("assemble").dependsOn(digest, sign, releaseNotesCopy)
-        }
-
-        project.tasks.register("showDistArtefacts") {
-            it.group = "Release"
-            it.description = "Shows release artifacts and dist packages"
-            it.doLast {
-                println("-----")
-                println("Distribution ${pom.name} ${pom.version}")
-                println("Repository tag ${pom.scm?.tag}")
-                println("Repository URL ${pom.scm?.uri}")
-                println("-----")
-                println("Binary artifacts: ")
-                val resolvedArtifacts = hc.resolvedConfiguration.resolvedArtifacts
-                for (artifact in resolvedArtifacts) {
-                    println("- ${artifact.file}")
-                }
-                val archives = project.configurations.getByName("archives")
-                println("-----")
-                println("Dist artifacts: ")
-                for (artifact in archives.allArtifacts) {
-                    if (artifact.file.exists()) {
-                        println("- ${artifact.file}")
-                    }
-                }
-                println("-----")
-            }
         }
 
         if (distStagingDir != null) {
