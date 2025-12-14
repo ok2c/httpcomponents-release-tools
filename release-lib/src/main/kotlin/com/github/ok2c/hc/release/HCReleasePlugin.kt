@@ -31,6 +31,7 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.util.FS
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.file.CopySpec
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
@@ -295,7 +296,8 @@ class HCReleasePlugin : Plugin<Project> {
         val libs: () -> CopySpec = {
             project.copySpec { copySpec ->
                 copySpec.into("lib")
-                hc.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+                val resolvedArtifacts = hc.incoming.artifacts
+                for (artifact in resolvedArtifacts) {
                     copySpec.from(artifact.file.absolutePath) {
                         it.include(artifact.file.name)
                     }
@@ -317,8 +319,21 @@ class HCReleasePlugin : Plugin<Project> {
             }
         }
 
-        if (!hc.resolvedConfiguration.hasError()) {
+        val unresolvedList = mutableListOf<UnresolvedDependencyResult>()
+        hc.incoming.resolutionResult.allDependencies { a ->
+            if (a is UnresolvedDependencyResult) {
+                unresolvedList.add(a);
+            }
+        }
 
+        if (unresolvedList.isNotEmpty()) {
+            println("WARNING: the following dependencies could not be resolved")
+            println("----")
+            for (unresolved in unresolvedList) {
+                println("- ${unresolved.requested.displayName}")
+            }
+            println("----")
+        } else {
             project.tasks.register("distBinZip", Zip::class.java) { zip ->
                 zip.group = "Release"
                 zip.description = "Builds binary dist ZIP package"
@@ -332,9 +347,6 @@ class HCReleasePlugin : Plugin<Project> {
                 tar.archiveClassifier.set("bin")
                 tar.with(docs(LF), libs())
             }
-
-        } else {
-            println("HC configuration ${hc.state}")
         }
 
         project.tasks.register("distSrcZip", Zip::class.java) { zip ->
@@ -378,7 +390,7 @@ class HCReleasePlugin : Plugin<Project> {
                 println("Repository URL ${pom.scm?.uri}")
                 println("-----")
                 println("Binary artifacts: ")
-                val resolvedArtifacts = hc.resolvedConfiguration.resolvedArtifacts
+                val resolvedArtifacts = hc.incoming.artifacts
                 for (artifact in resolvedArtifacts) {
                     println("- ${artifact.file}")
                 }
