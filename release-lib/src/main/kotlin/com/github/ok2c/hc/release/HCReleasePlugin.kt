@@ -15,7 +15,6 @@
  */
 package com.github.ok2c.hc.release
 
-import com.github.ok2c.hc.release.git.getAllTags
 import com.github.ok2c.hc.release.pom.PomArtifact
 import com.github.ok2c.hc.release.pom.PomTool
 import com.github.ok2c.hc.release.support.deleteContent
@@ -45,6 +44,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.Objects
 import java.util.stream.Collectors
 
 const val CRLF = "crlf"
@@ -84,6 +84,33 @@ fun prompt(message: String, defaultValue: String): String {
 }
 
 class HCReleasePlugin : Plugin<Project> {
+
+    internal fun doResolveLastRC(git: Git, artefactVersion: String): Pair<Int, String>? {
+        RevWalk(git.repository).use {
+            val releasePattern = "refs/tags/${artefactVersion}-RC"
+            return git.repository.refDatabase.getRefsByPrefix(Constants.R_TAGS).stream()
+                .map { ref -> ref.name }
+                .filter { ref -> ref.startsWith(releasePattern) }
+                .map { ref ->
+                    try {
+                        val rcNum = Integer.parseInt(ref.substring(releasePattern.length))
+                        Pair(rcNum, ref.substring("refs/tags/".length))
+                    } catch (_: NumberFormatException) {
+                        throw ReleaseException("Unexpected RC tag: ${ref}")
+                    }
+                }
+                .max(Comparator<Pair<Int, String>> { p1, p2 -> Objects.compare(p1.first, p2.first, Integer::compare) })
+                .orElse(null)
+        }
+    }
+
+    fun resolveLastRC(git: Git, artefactVersion: String): String? {
+        return doResolveLastRC(git, artefactVersion)?.second
+    }
+
+    fun resolveLastRCNum(git: Git, artefactVersion: String): Int? {
+        return doResolveLastRC(git, artefactVersion)?.first
+    }
 
     override fun apply(project: Project) {
 
@@ -180,24 +207,7 @@ class HCReleasePlugin : Plugin<Project> {
                 var releaseVersion = pomTool.determineNextReleaseVersion(artefactVersion).toString()
                 releaseVersion = prompt("Please enter release version", releaseVersion)
 
-                val lastRC = repoGit(releaseDir) { git ->
-                    RevWalk(git.repository).use {
-                        val releasePattern = "refs/tags/${releaseVersion}-RC"
-                        git.repository.refDatabase.getRefsByPrefix(Constants.R_TAGS).stream()
-                                .map { ref -> ref.name }
-                                .filter { ref -> ref.startsWith(releasePattern) }
-                                .map { ref ->
-                                    val s = ref.substring(releasePattern.length)
-                                    try {
-                                        Integer.parseInt(s)
-                                    } catch (ex: NumberFormatException) {
-                                        0
-                                    }
-                                }
-                                .max(Integer::compare)
-                                .orElse(0)
-                    }
-                }
+                val lastRC = repoGit(releaseDir) { git -> resolveLastRCNum(git, releaseVersion) } ?: 0;
 
                 var rc = "RC${lastRC + 1}"
                 rc = prompt("Please enter release candidate qualifier", rc)
@@ -539,8 +549,8 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("Unexpected version in POM: ${artefactVersion}; non-SNAPSHOT expected")
                     }
                     val rcTag = repoGit(releaseDir) { git ->
-                        git.getAllTags().setStartingWith("${artefactVersion}-RC").call().firstOrNull()
-                                ?: throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
+                        resolveLastRC(git, artefactVersion.toString()) ?:
+                        throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
                     }
                     val rc = PomArtifact(pom.groupId, artefactId, rcTag)
                     if (artefactVersion.major != rc.major ||
@@ -616,8 +626,8 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("Unexpected version in POM: ${artefactVersion}; non-SNAPSHOT expected")
                     }
                     val rcTag = repoGit(releaseDir) { git ->
-                        git.getAllTags().setStartingWith("${artefactVersion}-RC").call().firstOrNull()
-                                ?: throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
+                        resolveLastRC(git, artefactVersion.toString())
+                            ?: throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
                     }
                     val rc = PomArtifact(pom.groupId, artefactId, rcTag)
                     if (artefactVersion.major != rc.major ||
@@ -679,8 +689,8 @@ class HCReleasePlugin : Plugin<Project> {
                         throw ReleaseException("Unexpected version in POM: ${artefactVersion}; non-SNAPSHOT expected")
                     }
                     val rcTag = repoGit(releaseDir) { git ->
-                        git.getAllTags().setStartingWith("${artefactVersion}-RC").call().firstOrNull()
-                                ?: throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
+                        resolveLastRC(git, artefactVersion.toString())
+                            ?: throw ReleaseException("No RC tag found for ${artefactId} ${artefactVersion}")
                     }
                     val rc = PomArtifact(pom.groupId, artefactId, rcTag)
                     if (artefactVersion.major != rc.major ||
