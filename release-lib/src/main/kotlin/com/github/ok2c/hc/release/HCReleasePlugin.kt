@@ -297,9 +297,6 @@ class HCReleasePlugin : Plugin<Project> {
                     it.include("RELEASE_NOTES.txt")
                     it.filter(filerParams, FixCrLfFilter::class.java)
                 }
-                copySpec.from("${releaseDir}/target/site/apidocs") {
-                    it.into("javadoc")
-                }
             }
         }
 
