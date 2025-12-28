@@ -14,7 +14,12 @@ import org.tmatesoft.svn.core.io.SVNRepository
 import org.tmatesoft.svn.core.io.SVNRepositoryFactory
 import org.tmatesoft.svn.core.wc.SVNRevision
 import org.tmatesoft.svn.core.wc.SVNWCUtil
-import org.tmatesoft.svn.core.wc2.*
+import org.tmatesoft.svn.core.wc2.ISvnObjectReceiver
+import org.tmatesoft.svn.core.wc2.SvnCopySource
+import org.tmatesoft.svn.core.wc2.SvnInfo
+import org.tmatesoft.svn.core.wc2.SvnOperationFactory
+import org.tmatesoft.svn.core.wc2.SvnStatus
+import org.tmatesoft.svn.core.wc2.SvnTarget
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -51,10 +56,10 @@ class Svn {
         }
     }
 
-    fun info(dir: Path): SvnInfo {
+    fun info(file: Path): SvnInfo {
         return svn { opfactory ->
             val infoOp = opfactory.createGetInfo()
-            infoOp.setSingleTarget(SvnTarget.fromFile(dir.toFile()))
+            infoOp.setSingleTarget(SvnTarget.fromFile(file.toFile()))
             infoOp.run()
             infoOp.first()
         }
@@ -77,12 +82,9 @@ class Svn {
         }
     }
 
-    fun exists(uri: URI): Boolean {
+    fun existsRemote(uri: URI): Boolean {
         try {
-            val svnInfo = infoRemote(uri)
-            if (svnInfo != null) {
-                return true
-            }
+            return infoRemote(uri) != null
         } catch (ex: SVNException) {
             if (ex.errorMessage.errorCode != SVNErrorCode.RA_ILLEGAL_URL) {
                 throw ex
@@ -160,6 +162,17 @@ class Svn {
             schedulingOp.depth = SVNDepth.INFINITY
             schedulingOp.isForce = true
             schedulingOp.isIncludeIgnored = false
+            schedulingOp.run()
+        }
+    }
+
+    fun createScheduleForRemoval(file: Path) {
+        svn { opfactory ->
+            val schedulingOp = opfactory.createScheduleForRemoval()
+            schedulingOp.setSingleTarget(SvnTarget.fromFile(file.toFile()))
+            schedulingOp.isDeleteFiles
+            schedulingOp.depth = SVNDepth.INFINITY
+            schedulingOp.isForce = true
             schedulingOp.run()
         }
     }

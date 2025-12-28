@@ -44,7 +44,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Objects
+import java.util.*
 import java.util.stream.Collectors
 
 const val CRLF = "crlf"
@@ -642,7 +642,8 @@ class HCReleasePlugin : Plugin<Project> {
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
                     val svn = Svn()
-                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
+                    val releaseNotesExist = svn.existsRemote(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
+                        .let { false }
 
                     println("svnmucc file")
                     println("----------------8<-------------[ cut here ]------------------")
@@ -706,7 +707,7 @@ class HCReleasePlugin : Plugin<Project> {
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
                     val svn = Svn()
-                    val releaseNotesExist = svn.exists(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
+                    val releaseNotesExist = svn.existsRemote(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
 
                     val svnInfo = svn.info(rcDistStagingDir)
                     val rcLocation = svnInfo.url.toString().removePrefix("$HC_DIST_URI/")
