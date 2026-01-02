@@ -754,15 +754,7 @@ class HCReleasePlugin : Plugin<Project> {
         }
 
         val siteContent: (Path) -> CopySpec = { dir ->
-            project.copySpec { copySpec ->
-                copySpec.from("${dir}/target/site") {
-                    it.exclude("**/*.html")
-                }
-                copySpec.from("${dir}/target/site") {
-                    it.include("**/*.html")
-                    it.filter(FixCrLfFilter::class.java)
-                }
-            }
+            project.copySpec { copySpec -> copySpec.from("${dir}/target/site") }
         }
 
         project.tasks.register("stageSite") {
