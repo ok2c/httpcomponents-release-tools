@@ -8,5 +8,3 @@ signing.gnupg.keyName=
 org.gradle.console=plain
 # Keep it quiet
 org.gradle.logging.level=quiet
-# Disable daemon
-org.gradle.daemon=false

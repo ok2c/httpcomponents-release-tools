@@ -34,7 +34,7 @@ class FileDigester {
     }
 
     internal fun format(messageDigest: MessageDigest): String {
-        val padding = when(messageDigest.algorithm.toLowerCase(Locale.ROOT)) {
+        val padding = when(messageDigest.algorithm.lowercase(Locale.ROOT)) {
             "sha-512" -> 128
             "sha-256" -> 64
             else -> 32

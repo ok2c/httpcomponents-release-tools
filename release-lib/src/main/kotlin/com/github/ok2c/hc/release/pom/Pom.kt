@@ -38,7 +38,7 @@ class ArtefactVersion internal constructor(val sequence: List<Int>, val phase: D
     val minor: Int? get() = if (sequence.size > 1) sequence[1] else null
     val patch: Int? get() = if (sequence.size > 2) sequence[2] else null
 
-    private val normalizedQualifier = qualifier?.toUpperCase(Locale.ROOT)
+    private val normalizedQualifier = qualifier?.uppercase(Locale.ROOT)
 
     companion object {
 

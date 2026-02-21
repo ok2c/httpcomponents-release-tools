@@ -15,7 +15,7 @@
  */
 
 plugins {
-    kotlin("jvm") version "1.8.22"
+    kotlin("jvm") version "2.2.20"
     `java-gradle-plugin`
 }
 
@@ -27,7 +27,7 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
+    implementation(kotlin("stdlib"))
     implementation(libs.dom4j)
     implementation(libs.pullparser)
     implementation(libs.jgit)
@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.tagsoup)
     implementation(libs.slf4j.api)
     runtimeOnly(libs.slf4j.simple)
+    testImplementation(kotlin("test"))
     testImplementation(libs.junit.engine)
     testImplementation(libs.junit.params)
     testImplementation(libs.assertj.core)
@@ -48,8 +49,8 @@ tasks.test {
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+kotlin {
+    jvmToolchain(17)
 }
 
 gradlePlugin {
