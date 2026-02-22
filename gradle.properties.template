@@ -4,6 +4,9 @@ HC_WEB_STAGE_DIR =
 
 signing.gnupg.keyName=
 
+# ASF user name for SVN authentication
+asf.svn.user=
+
 # Use plain console
 org.gradle.console=plain
 # Keep it quiet

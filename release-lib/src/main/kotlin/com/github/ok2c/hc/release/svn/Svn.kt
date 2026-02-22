@@ -1,6 +1,5 @@
 package com.github.ok2c.hc.release.svn
 
-import org.tmatesoft.svn.cli.SVNConsoleAuthenticationProvider
 import org.tmatesoft.svn.cli.svn.SVNCommandEnvironment
 import org.tmatesoft.svn.cli.svn.SVNNotifyPrinter
 import org.tmatesoft.svn.cli.svn.SVNStatusPrinter
@@ -23,13 +22,24 @@ import org.tmatesoft.svn.core.wc2.SvnTarget
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.function.Function
 
 class Svn {
+
+    private val propertyResolver: Function<String, Any?>?
+
+    constructor(propertyResolver: Function<String, Any?>?) {
+        this.propertyResolver = propertyResolver
+    }
+
+    constructor() {
+        this.propertyResolver = null
+    }
 
     private fun createAuthManager(): ISVNAuthenticationManager {
         val configDir = SVNWCUtil.getDefaultConfigurationDirectory()
         val authmanager = SVNWCUtil.createDefaultAuthenticationManager(configDir, null, CharArray(0), false)
-        authmanager.setAuthenticationProvider(SVNConsoleAuthenticationProvider(false))
+        authmanager.setAuthenticationProvider(GPGAgentAuthenticationProvider(propertyResolver))
         return authmanager
     }
 
@@ -204,8 +214,13 @@ class Svn {
     fun copyRemote(src: URI, dst: URI, message: String): Long {
         return svn { opfactory ->
             val copyOp = opfactory.createRemoteCopy()
-            copyOp.addCopySource(SvnCopySource.create(SvnTarget.fromURL(
-                    SVNURL.parseURIEncoded(src.toASCIIString())), SVNRevision.HEAD))
+            copyOp.addCopySource(
+                SvnCopySource.create(
+                    SvnTarget.fromURL(
+                        SVNURL.parseURIEncoded(src.toASCIIString())
+                    ), SVNRevision.HEAD
+                )
+            )
             copyOp.setSingleTarget(SvnTarget.fromURL(SVNURL.parseURIEncoded(dst.toASCIIString())))
             copyOp.isFailWhenDstExists = true
             copyOp.commitMessage = message
@@ -217,8 +232,13 @@ class Svn {
     fun moveRemote(src: URI, dst: URI, message: String): Long {
         return svn { opfactory ->
             val copyOp = opfactory.createRemoteCopy()
-            copyOp.addCopySource(SvnCopySource.create(SvnTarget.fromURL(
-                SVNURL.parseURIEncoded(src.toASCIIString())), SVNRevision.HEAD))
+            copyOp.addCopySource(
+                SvnCopySource.create(
+                    SvnTarget.fromURL(
+                        SVNURL.parseURIEncoded(src.toASCIIString())
+                    ), SVNRevision.HEAD
+                )
+            )
             copyOp.setSingleTarget(SvnTarget.fromURL(SVNURL.parseURIEncoded(dst.toASCIIString())))
             copyOp.isFailWhenDstExists = true
             copyOp.isMove = true
@@ -255,14 +275,17 @@ class Svn {
                     is SvnRmOp -> {
                         commitEditor.deleteEntry(op.path.toString(), op.revision)
                     }
+
                     is SvnMkDirOp -> {
                         commitEditor.addDir(op.path.toString(), null, op.revision)
                         commitEditor.closeDir()
                     }
+
                     is SvnCpDirOp -> {
                         commitEditor.addDir(op.path.toString(), op.copyFrom?.toString(), op.revision)
                         commitEditor.closeDir()
                     }
+
                     is SvnCpFileOp -> {
                         commitEditor.addFile(op.path.toString(), op.copyFrom?.toString(), op.revision)
                     }

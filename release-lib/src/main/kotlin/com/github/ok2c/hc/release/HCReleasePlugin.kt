@@ -114,6 +114,10 @@ class HCReleasePlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
 
+        fun createSvn(): Svn {
+            return Svn({ propertyName -> project.findProperty(propertyName) } )
+        }
+
         project.tasks.register("checkConsole") {
             it.group = "Utility"
             it.description = "Tests if the console is available"
@@ -461,7 +465,7 @@ class HCReleasePlugin : Plugin<Project> {
                 it.doLast {
                     println("-----")
                     println("Dist staging location: ${distStagingDir}")
-                    val svn = Svn()
+                    val svn = createSvn()
                     if (Files.exists(distStagingDir)) {
                         svn.update(distStagingDir)
                     } else {
@@ -484,7 +488,7 @@ class HCReleasePlugin : Plugin<Project> {
                     val rcFullName = "${productName.lowercase()}-${releaseTag}"
                     val rcDistStagingDir = distStagingDir.resolve(rcFullName)
                     if (Files.exists(rcDistStagingDir)) {
-                        val svn = Svn()
+                        val svn = createSvn()
                         val localInfo = svn.info(rcDistStagingDir)
                         val rcDistURI = URI("${localInfo.repositoryRootUrl}/dev/httpcomponents/${rcFullName}")
                         val remoteInfo = svn.infoRemote(rcDistURI)
@@ -531,7 +535,7 @@ class HCReleasePlugin : Plugin<Project> {
 
                     println("Committing ${productName} ${artefactVersion} ${rc.qualifier} dist")
 
-                    val svn = Svn()
+                    val svn = createSvn()
                     svn.scheduleForAddition(distStagingDir)
                     val revision = svn.commit(distStagingDir, "${productName} ${artefactVersion} ${rc.qualifier} dist")
                     println("Committed as r${revision}")
@@ -562,7 +566,7 @@ class HCReleasePlugin : Plugin<Project> {
                     if (Files.notExists(rcDistStagingDir)) {
                         throw ReleaseException("RC dist ${rcDistStagingDir} does not exist")
                     }
-                    val svn = Svn()
+                    val svn = createSvn()
                     val svnInfo = svn.info(rcDistStagingDir)
                     val repoURL = svnInfo.url
                     val distRevision = svnInfo.lastChangedRevision
@@ -641,7 +645,7 @@ class HCReleasePlugin : Plugin<Project> {
                     }
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
-                    val svn = Svn()
+                    val svn = createSvn()
                     val releaseNotesExist = svn.existsRemote(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
                         .let { false }
 
@@ -706,7 +710,7 @@ class HCReleasePlugin : Plugin<Project> {
 
                     val releaseNotes = "RELEASE_NOTES-${artefactVersion.major}.${artefactVersion.minor}.x.txt"
 
-                    val svn = Svn()
+                    val svn = createSvn()
                     val releaseNotesExist = svn.existsRemote(URI("${HC_DIST_URI}/release/httpcomponents/${productPath}/${releaseNotes}"))
 
                     val svnInfo = svn.info(rcDistStagingDir)
@@ -800,7 +804,7 @@ class HCReleasePlugin : Plugin<Project> {
 
                 println("Checking out project website content from ${baseUri} to ${stagingDir}")
 
-                val svn = Svn()
+                val svn = createSvn()
                 if (Files.exists(stagingDir)) {
                     svn.cleanup(stagingDir)
                     svn.update(stagingDir)
@@ -860,7 +864,7 @@ class HCReleasePlugin : Plugin<Project> {
 
                     println("Moving project website content of ${productName} ${artefactVersion} to ${targetUri}")
 
-                    val svn = Svn()
+                    val svn = createSvn()
                     val revision = svn.moveRemote(svnUri, targetUri, "${productName} ${artefactVersion} release")
                     println("Committed as r${revision}")
                 }
