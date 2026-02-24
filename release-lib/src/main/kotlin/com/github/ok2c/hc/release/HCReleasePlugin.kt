@@ -32,11 +32,13 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.file.CopySpec
+import org.gradle.api.internal.tasks.userinput.UserInputHandler
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.internal.extensions.core.serviceOf
 import org.gradle.plugins.signing.Sign
 import org.tmatesoft.svn.core.SVNErrorCode
 import org.tmatesoft.svn.core.SVNException
@@ -44,7 +46,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Objects
+import java.util.*
 import java.util.stream.Collectors
 
 const val CRLF = "crlf"
@@ -72,15 +74,6 @@ inline fun <R> repoGit(dir: Path, block: (Git) -> R): R {
         val git = Git(repo)
         return block(git)
     }
-}
-
-fun prompt(message: String, defaultValue: String): String {
-    val console = System.console() ?: return defaultValue
-
-    System.out.println("${message}: [defaults to ${defaultValue}]")
-
-    val input = console.readLine()
-    return if (!input.isNullOrBlank()) input else defaultValue
 }
 
 class HCReleasePlugin : Plugin<Project> {
@@ -116,19 +109,6 @@ class HCReleasePlugin : Plugin<Project> {
 
         fun createSvn(): Svn {
             return Svn({ propertyName -> project.findProperty(propertyName) } )
-        }
-
-        project.tasks.register("checkConsole") {
-            it.group = "Utility"
-            it.description = "Tests if the console is available"
-            it.doLast {
-                val console = System.console()
-                if (console == null) {
-                    println("WARNING: console is not available")
-                } else {
-                    console.printf("Console looks fine\r\n")
-                }
-            }
         }
 
         val p1 = project.findProperty("HC_RELEASE_DIR") as String?
@@ -208,13 +188,17 @@ class HCReleasePlugin : Plugin<Project> {
                     throw ReleaseException("Unexpected version in POM: ${artefactVersion}; SNAPSHOT expected")
                 }
 
+                val userInputHandler: UserInputHandler = project.serviceOf()
+
                 var releaseVersion = pomTool.determineNextReleaseVersion(artefactVersion).toString()
-                releaseVersion = prompt("Please enter release version", releaseVersion)
+                releaseVersion = userInputHandler.askUser {
+                    uq -> uq.askQuestion("Please enter release version", releaseVersion)}.get()
 
                 val lastRC = repoGit(releaseDir) { git -> resolveLastRCNum(git, releaseVersion) } ?: 0;
 
                 var rc = "RC${lastRC + 1}"
-                rc = prompt("Please enter release candidate qualifier", rc)
+                rc = userInputHandler.askUser {
+                    uq -> uq.askQuestion("Please enter release candidate qualifier", rc) }.get()
 
                 println("Preparing release ${productName} ${releaseVersion} ${rc}")
 
@@ -249,8 +233,11 @@ class HCReleasePlugin : Plugin<Project> {
             it.group = "Release"
             it.description = "Prepares next development version"
             it.doLast {
+                val userInputHandler: UserInputHandler = project.serviceOf()
+
                 var snapshotVersion = pomTool.determineNextSnapshotVersion(artefactVersion).toString()
-                snapshotVersion = prompt("Please enter next development version", snapshotVersion)
+                snapshotVersion = userInputHandler.askUser {
+                        uq -> uq.askQuestion("Please enter next development version", snapshotVersion) }.get()
 
                 println("Upgrading ${productName} from ${artefactVersion} to ${snapshotVersion}")
 
