@@ -258,9 +258,15 @@ class PomTool {
                 siteElement.element("name")?.textTrim,
                 siteElement.element("url")?.textTrim)) else null
 
-        val modulesElement = rootElement.element("modules")
-        val modules: List<String> = modulesElement?.elements("module")?.stream()?.map { it.textTrim }?.toList()
-                ?: emptyList()
+        val modules = mutableListOf<String>()
+        rootElement.element("modules")?.elements("module")?.forEach {
+            modules.add(it.textTrim) }
+
+        rootElement.element("profiles")?.elements("profile")?.forEach { e ->
+            e.element("modules")?.elements("module")?.forEach {
+                modules.add(it.textTrim) }
+        }
+
         return Pom(name, parentArtefact, artefact, scm, dm, modules)
     }
 
