@@ -24,9 +24,8 @@ import java.io.Writer
 import java.net.URI
 import java.net.URL
 import java.nio.file.Path
-import java.util.*
+import java.util.Locale
 import java.util.stream.Collectors
-import kotlin.streams.toList
 
 enum class DevPhase(val id: String) {
     ALPHA("alpha"), BETA("beta"), UNSPECIFIED("")
@@ -39,6 +38,21 @@ class ArtefactVersion internal constructor(val sequence: List<Int>, val phase: D
     val patch: Int? get() = if (sequence.size > 2) sequence[2] else null
 
     private val normalizedQualifier = qualifier?.uppercase(Locale.ROOT)
+
+    fun releaseSeries(): String {
+        if (major == null) {
+            return "unknown";
+        }
+        if (minor != null) {
+            return "${major}.${minor}"
+        } else {
+            return "${major}"
+        }
+    }
+
+    fun isMajorCount(): Boolean {
+        return major != null && minor == null
+    }
 
     companion object {
 
@@ -151,6 +165,7 @@ class ArtefactVersion internal constructor(val sequence: List<Int>, val phase: D
 class Pom(val name: String?,
           val parent: PomArtifact?,
           val artefact: PomArtifact?,
+          val packaging: String?,
           val scm: Scm?,
           val distributionManagement: DistributionManagement?,
           val modules: List<String>) {
@@ -158,6 +173,10 @@ class Pom(val name: String?,
     val groupId: String? get() = artefact?.groupId ?: parent?.groupId
     val artefactId: String? get() = artefact?.id
     val version: ArtefactVersion? get() = artefact?.parsedVersion ?: parent?.parsedVersion
+
+    fun isSingleArtifact(): Boolean {
+        return modules.isEmpty()
+    }
 
     override fun toString(): String {
         return "Pom(name='$name', parent=$parent, artefact=$artefact)"
@@ -241,6 +260,7 @@ class PomTool {
                 rootElement.element("groupId")?.textTrim,
                 rootElement.element("artifactId")?.textTrim,
                 rootElement.element("version")?.textTrim)
+        val packaging = rootElement.element("packaging")?.textTrim
         val parentArtefact = if (parentElement != null) createPomArtifact(
                 parentElement.element("groupId")?.textTrim,
                 parentElement.element("artifactId")?.textTrim,
@@ -267,7 +287,7 @@ class PomTool {
                 modules.add(it.textTrim) }
         }
 
-        return Pom(name, parentArtefact, artefact, scm, dm,
+        return Pom(name, parentArtefact, artefact, packaging, scm, dm,
             modules.stream().sorted().toList())
     }
 
